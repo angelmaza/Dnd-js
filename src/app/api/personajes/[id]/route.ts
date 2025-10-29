@@ -1,0 +1,84 @@
+// src/app/api/personajes/[id]/route.ts
+import { NextResponse } from "next/server";
+import { query, execute } from "@/lib/mysql";
+import type { PersonajeRow } from "@/entidades/db";
+
+// GET /api/personajes/:id  -> detalle personaje
+export async function GET(
+  _req: Request,
+  { params }: { params: { id: string } }
+) {
+  const id = Number(params.id);
+  if (!Number.isFinite(id)) {
+    return NextResponse.json({ error: "id inválido" }, { status: 400 });
+  }
+
+  const rows = await query<PersonajeRow[]>(
+    `SELECT id_pj, nombre, informacion, imagen, imagen_fondo
+     FROM Personajes
+     WHERE id_pj = ? LIMIT 1`,
+    [id]
+  );
+  if (!rows.length) {
+    return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+  }
+  return NextResponse.json(rows[0]);
+}
+
+// PUT /api/personajes/:id  -> actualización parcial (COALESCE en SQL)
+export async function PUT(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  const id = Number(params.id);
+  if (!Number.isFinite(id)) {
+    return NextResponse.json({ error: "id inválido" }, { status: 400 });
+  }
+
+  const body = await req.json().catch(() => ({} as any));
+
+  // Solo normalizamos nombre si viene; resto puede ser null para borrar
+  const nombre =
+    typeof body.nombre === "string" ? String(body.nombre).trim() : undefined;
+  const informacion =
+    body.informacion === undefined ? undefined : body.informacion ?? null;
+  const imagen = body.imagen === undefined ? undefined : body.imagen ?? null;
+  const imagen_fondo =
+    body.imagen_fondo === undefined ? undefined : body.imagen_fondo ?? null;
+
+  const result = await execute(
+    `UPDATE Personajes
+       SET nombre        = COALESCE(?, nombre),
+           informacion   = COALESCE(?, informacion),
+           imagen        = COALESCE(?, imagen),
+           imagen_fondo  = COALESCE(?, imagen_fondo)
+     WHERE id_pj = ?`,
+    [
+      nombre === undefined ? null : nombre,
+      informacion === undefined ? null : informacion,
+      imagen === undefined ? null : imagen,
+      imagen_fondo === undefined ? null : imagen_fondo,
+      id,
+    ]
+  );
+
+  return NextResponse.json({ affectedRows: result.affectedRows });
+}
+
+// DELETE /api/personajes/:id
+export async function DELETE(
+  _req: Request,
+  { params }: { params: { id: string } }
+) {
+  const id = Number(params.id);
+  if (!Number.isFinite(id)) {
+    return NextResponse.json({ error: "id inválido" }, { status: 400 });
+  }
+
+  const result = await execute(`DELETE FROM Personajes WHERE id_pj = ?`, [id]);
+  // affectedRows = 0 si no existía
+  if (!result.affectedRows) {
+    return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+  }
+  return NextResponse.json({ affectedRows: result.affectedRows });
+}
