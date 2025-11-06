@@ -9,5 +9,5 @@ export async function GET() {
      FROM V_ALCHEMY_PROPORCIONES
      ORDER BY NombreProducto ASC, ProporcionElemento DESC`
   );
-  return NextResponse.json(rows);
+  return NextResponse.json(rows); 
 }

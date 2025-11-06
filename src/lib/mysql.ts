@@ -35,7 +35,7 @@ if (process.env.NODE_ENV !== "production") global._mysqlPool = pool;
  */
 export async function query<T extends RowDataPacket[] = RowDataPacket[]>(
   sql: string,
-  params?: any[]
+  params?: (string | number | boolean | null)[]
 ): Promise<T> {
   const [rows] = await pool.query<T>(sql, params);
   return rows;
@@ -47,7 +47,7 @@ export async function query<T extends RowDataPacket[] = RowDataPacket[]>(
  */
 export async function execute(
   sql: string,
-  params?: any[]
+  params?: (string | number | boolean | null)[]
 ): Promise<ResultSetHeader> {
   const [res] = await pool.execute<ResultSetHeader>(sql, params);
   return res;

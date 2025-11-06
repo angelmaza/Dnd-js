@@ -35,34 +35,40 @@ export async function PUT(
     return NextResponse.json({ error: "id inválido" }, { status: 400 });
   }
 
-  const body = await req.json().catch(() => ({} as any));
+  const body = await req.json().catch(() => ({}));
 
   // Solo normalizamos nombre si viene; resto puede ser null para borrar
   const nombre =
-    typeof body.nombre === "string" ? String(body.nombre).trim() : undefined;
+    typeof body.nombre === "string" ? body.nombre.trim() : undefined;
   const informacion =
     body.informacion === undefined ? undefined : body.informacion ?? null;
-  const imagen = body.imagen === undefined ? undefined : body.imagen ?? null;
+  const imagen =
+    body.imagen === undefined ? undefined : body.imagen ?? null;
   const imagen_fondo =
     body.imagen_fondo === undefined ? undefined : body.imagen_fondo ?? null;
 
-  const result = await execute(
-    `UPDATE Personajes
-       SET nombre        = COALESCE(?, nombre),
-           informacion   = COALESCE(?, informacion),
-           imagen        = COALESCE(?, imagen),
-           imagen_fondo  = COALESCE(?, imagen_fondo)
-     WHERE id_pj = ?`,
-    [
-      nombre === undefined ? null : nombre,
-      informacion === undefined ? null : informacion,
-      imagen === undefined ? null : imagen,
-      imagen_fondo === undefined ? null : imagen_fondo,
-      id,
-    ]
-  );
+  try {
+    await execute(
+      `UPDATE Personajes
+         SET nombre        = COALESCE(?, nombre),
+             informacion   = COALESCE(?, informacion),
+             imagen        = COALESCE(?, imagen),
+             imagen_fondo  = COALESCE(?, imagen_fondo)
+       WHERE id_pj = ?`,
+      [
+        nombre === undefined ? null : nombre,
+        informacion === undefined ? null : informacion,
+        imagen === undefined ? null : imagen,
+        imagen_fondo === undefined ? null : imagen_fondo,
+        id,
+      ]
+    );
 
-  return NextResponse.json({ affectedRows: result.affectedRows });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Error actualizando personaje:", err);
+    return NextResponse.json({ error: "Error actualizando personaje" }, { status: 500 });
+  }
 }
 
 // DELETE /api/personajes/:id

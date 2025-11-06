@@ -2,15 +2,30 @@
 import { NextResponse } from "next/server";
 import { query, execute } from "@/lib/mysql";
 import type { CraftRequest, ElementoRow } from "@/entidades/alchemy";
+import { RowDataPacket } from "mysql2";
+
+//type NumeroInt = { numero: number;} Esto solo valdria si SQL me devuelve campo NUMERO
+
+type NumeroInt<T> = T & RowDataPacket;
+
 
 export async function POST(req: Request) {
-  const body: CraftRequest = await req.json().catch(() => null as any);
-  if (!body?.Receta?.NombreProducto || !Array.isArray(body.Receta.Elementos)) {
+  let body: CraftRequest | null = null;
+  try {
+    body = (await req.json()) as CraftRequest;
+  } catch {
+    body = null;
+  }
+
+  if (
+    !body?.Receta?.NombreProducto ||
+    !Array.isArray(body.Receta.Elementos)
+  ) {
     return NextResponse.json({ error: "Payload inválido" }, { status: 400 });
   }
 
   // Buscar producto por nombre
-  const prod = await query<{ id_producto: number }[]>(
+  const prod = await query<NumeroInt<{ id_producto: number }>[]>(
     `SELECT id_producto FROM Productos WHERE nombre = ? LIMIT 1`,
     [body.Receta.NombreProducto]
   );
@@ -42,7 +57,7 @@ export async function POST(req: Request) {
   }
 
   // Añadir a Pocion_Y_Portador
-  const existing = await query<{ cantidad: number }[]>(
+  const existing = await query<NumeroInt<{ cantidad: number }>[]>(
     `SELECT cantidad FROM Pocion_Y_Portador WHERE id_personaje = ? AND id_item = ? LIMIT 1`,
     [body.IdCrafter, idProducto]
   );

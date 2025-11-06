@@ -1,19 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { VAlchemyProporcioneRow } from "@/entidades/alchemy";
 
 /* ===== tipos locales (ligeros) ===== */
 type Personaje = { id_pj: number; nombre: string };
 type Elemento = { id_elemento: number; nombre: string; cantidad: number | null; color?: string | null };
 type VItem = { NombreElemento: string; ProporcionElemento: number };
 type RecetaView = { NombreProducto: string; Descripcion: string | null; Elementos: VItem[] };
-
 type MaterialMap = {
   id_material: number;
   material: string | null;
   cant_material: number;
   elementos: { nombre: string; proporcion: number }[];
 };
+type BaseNombre = typeof BASES[number]; // "Aceite" | "Grasa"
 
 const MAX_ELEM = 5;
 const BASES = ["Aceite", "Grasa"] as const;
@@ -24,7 +25,7 @@ export default function AlchemyPage() {
   const [idCrafter, setIdCrafter] = useState<number>(1);
 
   const [elementos, setElementos] = useState<Elemento[]>([]);
-  const [recetasRaw, setRecetasRaw] = useState<any[]>([]);
+  const [recetasRaw, setRecetasRaw] = useState<VAlchemyProporcioneRow[]>([]);
   const [recetas, setRecetas] = useState<RecetaView[]>([]);
 
   const [mats, setMats] = useState<MaterialMap[]>([]);
@@ -65,9 +66,9 @@ export default function AlchemyPage() {
   /* ===== agrupar recetas ===== */
   useEffect(() => {
     const grouped = Object.values(
-      (recetasRaw as any[]).reduce((acc, r) => {
+      recetasRaw .reduce((acc, r) => {
         const key = `${r.NombreProducto}__${r.Descripcion ?? ""}`;
-        if (!acc[key]) acc[key] = { NombreProducto: r.NombreProducto, Descripcion: r.Descripcion, Elementos: [] as VItem[] };
+        if (!acc[key]) acc[key] = { NombreProducto: r.NombreProducto ?? "", Descripcion: r.Descripcion, Elementos: [] as VItem[] };
         if (r.NombreElemento) acc[key].Elementos.push({ NombreElemento: r.NombreElemento, ProporcionElemento: r.ProporcionElemento ?? 0 });
         return acc;
       }, {} as Record<string, RecetaView>)
@@ -132,7 +133,7 @@ export default function AlchemyPage() {
   /* ===== acciones: recetas ===== */
   const guardarReceta = async () => {
     const base = nueva.Elementos[MAX_ELEM - 1];
-    if (BASES.includes(base.NombreElemento as any)) base.ProporcionElemento = 1;
+    if (BASES.includes(base.NombreElemento as BaseNombre)) base.ProporcionElemento = 1;
 
     const res = await fetch("/api/alchemy/guardar-receta", {
       method: "POST",

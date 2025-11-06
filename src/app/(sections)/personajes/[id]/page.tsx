@@ -61,7 +61,7 @@ export default function VerPersonaje() {
           </div>
 
           <footer className="media-actions">
-            <a className="link-accent" href="/personajes">← Volver a personajes</a>
+            <link className="link-accent" href="/personajes">← Volver a personajes</link>
           </footer>
         </div>
       </article>

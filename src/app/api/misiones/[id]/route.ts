@@ -1,6 +1,7 @@
 // src/app/api/misiones/[id]/route.ts
 import { NextResponse } from "next/server";
 import { query, execute } from "@/lib/mysql";
+import type { MisionRow } from "@/entidades/db";
 
 // GET /api/misiones/:id
 export async function GET(
@@ -8,7 +9,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const id = Number(params.id);
-  const rows = await query<any>(
+  const rows = await query<MisionRow[]>(
     `SELECT id_mision, titulo, zona, npc, descripcion, importancia, recompensa, completada
      FROM Misiones WHERE id_mision = ? LIMIT 1`,
     [id]
@@ -34,29 +35,35 @@ export async function PUT(
     completada: body.completada ? 1 : 0,
   };
 
-  const result: any = await execute(
-    `UPDATE Misiones
-     SET titulo = COALESCE(?, titulo),
-         zona = ?,
-         npc = ?,
-         descripcion = ?,
-         importancia = COALESCE(?, importancia),
-         recompensa = ?,
-         completada = ?
-     WHERE id_mision = ?`,
-    [
-      fields.titulo,
-      fields.zona,
-      fields.npc,
-      fields.descripcion,
-      fields.importancia,
-      fields.recompensa,
-      fields.completada,
-      id,
-    ]
-  );
+  try {
+    await execute(
+      `UPDATE Misiones
+       SET titulo = COALESCE(?, titulo),
+           zona = ?,
+           npc = ?,
+           descripcion = ?,
+           importancia = COALESCE(?, importancia),
+           recompensa = ?,
+           completada = ?
+       WHERE id_mision = ?`,
+      [
+        fields.titulo,
+        fields.zona,
+        fields.npc,
+        fields.descripcion,
+        fields.importancia,
+        fields.recompensa,
+        fields.completada,
+        id,
+      ]
+    );
 
-  return NextResponse.json({ affectedRows: result.affectedRows });
+    // Si todo va bien
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Error actualizando misión:", err);
+    return NextResponse.json({ error: "Error actualizando misión" }, { status: 500 });
+  }
 }
 
 // DELETE /api/misiones/:id
@@ -65,6 +72,17 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   const id = Number(params.id);
-  const result: any = await execute(`DELETE FROM Misiones WHERE id_mision = ?`, [id]);
-  return NextResponse.json({ affectedRows: result.affectedRows });
+
+  try {
+    await execute(
+      `DELETE FROM Misiones WHERE id_mision = ?`,
+      [id]
+    );
+
+    // Si todo va bien
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Error eliminando misión:", err);
+    return NextResponse.json({ error: "Error eliminando misión" }, { status: 500 });
+  }
 }

@@ -99,10 +99,10 @@ export default function BaroviaPage() {
   // Evitar que el navegador haga scroll con la rueda sobre el contenedor
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el) return
     const handler = (e: WheelEvent) => e.preventDefault();
     el.addEventListener("wheel", handler, { passive: false });
-    return () => el.removeEventListener("wheel", handler as any);
+    return () => el.removeEventListener("wheel", handler);
   }, []);
 
   return (

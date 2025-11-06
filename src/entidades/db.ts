@@ -137,3 +137,7 @@ export interface VEquipajePersonajesRow extends RowDataPacket {
   Cantidad: number | null;
   Tipo: string | null;          // 'Item' | 'Pocion'
 }
+
+interface CantidadRow extends RowDataPacket {
+  cantidad: number;
+}
