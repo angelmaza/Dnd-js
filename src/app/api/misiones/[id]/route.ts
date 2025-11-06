@@ -8,10 +8,10 @@ import type { MisionRow } from "@/entidades/db";
 
 // GET /api/misiones/[id]
 export async function GET(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
+  _req: Request,
+  context: { params: { id: string } }
 ) {
-  const id = Number(params.id);
+  const id = Number(context.params.id);
 
   const rows = await query<MisionRow[]>(
     `SELECT id_mision, titulo, zona, npc, descripcion, importancia, recompensa, completada
@@ -19,7 +19,7 @@ export async function GET(
     [id]
   );
 
-  if (!rows.length) {
+  if (rows.length === 0) {
     return NextResponse.json({ error: "No encontrada" }, { status: 404 });
   }
 
