@@ -1,20 +1,25 @@
 // src/app/api/misiones/[id]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { query, execute } from "@/lib/mysql";
 import type { MisionRow } from "@/entidades/db";
 
-// GET /api/misiones/:id
+// GET /api/misiones/[id]
 export async function GET(
-  _req: Request,
+  _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const id = Number(params.id);
+
   const rows = await query<MisionRow[]>(
     `SELECT id_mision, titulo, zona, npc, descripcion, importancia, recompensa, completada
      FROM Misiones WHERE id_mision = ? LIMIT 1`,
     [id]
   );
-  if (!rows.length) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
+
+  if (!rows.length) {
+    return NextResponse.json({ error: "No encontrada" }, { status: 404 });
+  }
+
   return NextResponse.json(rows[0]);
 }
 
