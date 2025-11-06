@@ -8,7 +8,7 @@ export type NumRow<K extends string> = Row<Record<K, number>>;
 /** Devuelve la primera fila o null */
 export async function queryOne<T extends RowDataPacket>(
   sql: string,
-  params?: any[]
+  params?: (string | number | boolean | null)[]
 ): Promise<T | null> {
   const rows = await query<T[]>(sql, params);
   return rows[0] ?? null;
