@@ -1,3 +1,6 @@
+export const runtime = "nodejs";
+
+
 // src/app/api/misiones/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { query, execute } from "@/lib/mysql";
