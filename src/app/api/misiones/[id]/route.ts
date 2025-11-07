@@ -5,15 +5,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { query, execute } from "@/lib/mysql";
 import type { MisionRow } from "@/entidades/db";
 
-// Helper de tipo para esta ruta
-type MisionesRouteContext = RouteContext<"/api/misiones/[id]">;
-
 // GET /api/misiones/[id]
 export async function GET(
   _req: NextRequest,
-  ctx: MisionesRouteContext
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await ctx.params; // params es una Promise en Next 15
+  const { id } = await params;
   const numId = Number(id);
 
   if (Number.isNaN(numId)) {
@@ -36,9 +33,9 @@ export async function GET(
 // PUT /api/misiones/[id]
 export async function PUT(
   req: NextRequest,
-  ctx: MisionesRouteContext
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await ctx.params;
+  const { id } = await params;
   const numId = Number(id);
 
   if (Number.isNaN(numId)) {
@@ -93,9 +90,9 @@ export async function PUT(
 // DELETE /api/misiones/[id]
 export async function DELETE(
   _req: NextRequest,
-  ctx: MisionesRouteContext
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await ctx.params;
+  const { id } = await params;
   const numId = Number(id);
 
   if (Number.isNaN(numId)) {
