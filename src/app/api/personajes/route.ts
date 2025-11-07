@@ -1,36 +1,33 @@
-// src/app/api/personajes/route.ts
-import { NextResponse } from "next/server";
-import { query, execute } from "@/lib/mysql";
+// src/app/api/personajes/[id]/route.ts
+export const runtime = "nodejs";
+
+import { NextRequest, NextResponse } from "next/server";
+import { query } from "@/lib/mysql";
 import type { PersonajeRow } from "@/entidades/db";
 
-// GET /api/personajes
-export async function GET() {
+// GET /api/personajes/[id]
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const numId = Number(id);
+
+  if (Number.isNaN(numId)) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
+
   const rows = await query<PersonajeRow[]>(
     `SELECT id_pj, nombre, informacion, imagen, imagen_fondo
      FROM Personajes
-     ORDER BY id_pj ASC`
+     WHERE id_pj = ?
+     LIMIT 1`,
+    [numId]
   );
-  return NextResponse.json(rows);
-}
 
-// POST /api/personajes
-export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-
-  const nombre = String(body.nombre || "").trim();
-  const informacion = body.informacion ?? null;
-  const imagen = body.imagen ?? null;
-  const imagen_fondo = body.imagen_fondo ?? null;
-
-  if (!nombre) {
-    return NextResponse.json({ error: "El nombre es obligatorio" }, { status: 400 });
+  if (rows.length === 0) {
+    return NextResponse.json({ error: "No encontrado" }, { status: 404 });
   }
 
-  const result = await execute(
-    `INSERT INTO Personajes (nombre, informacion, imagen, imagen_fondo)
-     VALUES (?, ?, ?, ?)`,
-    [nombre, informacion, imagen, imagen_fondo]
-  );
-
-  return NextResponse.json({ id: result.insertId }, { status: 201 });
+  return NextResponse.json(rows[0]);
 }
