@@ -1,15 +1,16 @@
 // src/app/api/alchemy/mats/route.ts
 import { NextResponse } from "next/server";
 import { query } from "@/lib/mysql";
+import type { RowDataPacket } from "mysql2";
 
 // Cada fila: un elemento extraíble de un material
-type MatsMapRow = {
-  id: number;                 // id de Mats_extraidos
+type MatsMapRow = RowDataPacket & {
+  id: number;
   id_material: number;
   material: string | null;
   cant_material: number | null;
   elemento: string | null;
-  cant_extraible: number;     // cuántos “Elementos” salen por 1 “Material”
+  cant_extraible: number;
 };
 
 export async function GET() {
@@ -26,7 +27,6 @@ export async function GET() {
      ORDER BY m.nombre, me.id`
   );
 
-  // Agrupar por material para que sea más fácil de consumir en el UI
   const grouped = Object.values(
     rows.reduce((acc, r) => {
       const k = r.id_material;
@@ -39,10 +39,21 @@ export async function GET() {
         };
       }
       if (r.elemento) {
-        acc[k].elementos.push({ nombre: r.elemento, proporcion: r.cant_extraible });
+        acc[k].elementos.push({
+          nombre: r.elemento,
+          proporcion: r.cant_extraible,
+        });
       }
       return acc;
-    }, {} as Record<number, { id_material: number; material: string | null; cant_material: number; elementos: { nombre: string; proporcion: number }[] }>)
+    }, {} as Record<
+      number,
+      {
+        id_material: number;
+        material: string | null;
+        cant_material: number;
+        elementos: { nombre: string; proporcion: number }[];
+      }
+    >)
   );
 
   return NextResponse.json(grouped);
