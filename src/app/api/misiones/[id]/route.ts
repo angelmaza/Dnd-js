@@ -1,17 +1,30 @@
+// src/app/api/misiones/[id]/route.ts
 export const runtime = "nodejs";
 
-
-// src/app/api/misiones/[id]/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { query, execute } from "@/lib/mysql";
 import type { MisionRow } from "@/entidades/db";
 
+// Helper para extraer el ID desde la URL
+function getIdFromRequest(req: Request): number | null {
+  const url = new URL(req.url);
+  const segments = url.pathname.split("/").filter(Boolean);
+  const last = segments[segments.length - 1];
+
+  if (!last) return null;
+
+  const id = Number(last);
+  if (Number.isNaN(id)) return null;
+
+  return id;
+}
+
 // GET /api/misiones/[id]
-export async function GET(
-  _req: Request,
-  context: { params: { id: string } }
-) {
-  const id = Number(context.params.id);
+export async function GET(req: Request) {
+  const id = getIdFromRequest(req);
+  if (id === null) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
 
   const rows = await query<MisionRow[]>(
     `SELECT id_mision, titulo, zona, npc, descripcion, importancia, recompensa, completada
@@ -26,13 +39,15 @@ export async function GET(
   return NextResponse.json(rows[0]);
 }
 
-// PUT /api/misiones/:id  (actualización completa/sencilla)
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const id = Number(params.id);
-  const body = await req.json().catch(() => ({}));
+// PUT /api/misiones/[id]
+export async function PUT(req: Request) {
+  const id = getIdFromRequest(req);
+  if (id === null) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
+
+  const body = await req.json().catch(() => ({} as any));
+
   const fields = {
     titulo: body.titulo ?? null,
     zona: body.zona ?? null,
@@ -46,13 +61,14 @@ export async function PUT(
   try {
     await execute(
       `UPDATE Misiones
-       SET titulo = COALESCE(?, titulo),
-           zona = ?,
-           npc = ?,
-           descripcion = ?,
-           importancia = COALESCE(?, importancia),
-           recompensa = ?,
-           completada = ?
+       SET
+         titulo = COALESCE(?, titulo),
+         zona = COALESCE(?, zona),
+         npc = COALESCE(?, npc),
+         descripcion = COALESCE(?, descripcion),
+         importancia = COALESCE(?, importancia),
+         recompensa = COALESCE(?, recompensa),
+         completada = COALESCE(?, completada)
        WHERE id_mision = ?`,
       [
         fields.titulo,
@@ -66,31 +82,31 @@ export async function PUT(
       ]
     );
 
-    // Si todo va bien
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Error actualizando misión:", err);
-    return NextResponse.json({ error: "Error actualizando misión" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error actualizando misión" },
+      { status: 500 }
+    );
   }
 }
 
-// DELETE /api/misiones/:id
-export async function DELETE(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
-  const id = Number(params.id);
+// DELETE /api/misiones/[id]
+export async function DELETE(req: Request) {
+  const id = getIdFromRequest(req);
+  if (id === null) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
 
   try {
-    await execute(
-      `DELETE FROM Misiones WHERE id_mision = ?`,
-      [id]
-    );
-
-    // Si todo va bien
+    await execute(`DELETE FROM Misiones WHERE id_mision = ?`, [id]);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Error eliminando misión:", err);
-    return NextResponse.json({ error: "Error eliminando misión" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error eliminando misión" },
+      { status: 500 }
+    );
   }
 }
