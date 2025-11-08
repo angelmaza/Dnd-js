@@ -1,3 +1,4 @@
+/**
 // src/lib/mysql.ts
 import mysql, {
   PoolOptions,
@@ -26,13 +27,13 @@ const config: PoolOptions = {
 export const pool = global._mysqlPool ?? mysql.createPool(config);
 if (process.env.NODE_ENV !== "production") global._mysqlPool = pool;
 
-/**
+
  * Helper para SELECT.
  * T es un ARRAY de filas que extienden RowDataPacket.
  * Ejemplo de uso:
  *   interface Row extends RowDataPacket { id: number; nombre: string }
  *   const rows = await query<Row[]>(`SELECT id, nombre FROM tabla`);
- */
+ 
 export async function query<T extends RowDataPacket[] = RowDataPacket[]>(
   sql: string,
   params?: (string | number | boolean | null)[]
@@ -44,7 +45,7 @@ export async function query<T extends RowDataPacket[] = RowDataPacket[]>(
 /**
  * Helper para INSERT / UPDATE / DELETE.
  * Devuelve metadatos como insertId, affectedRows, etc.
- */
+ 
 export async function execute(
   sql: string,
   params?: (string | number | boolean | null)[]
@@ -52,3 +53,4 @@ export async function execute(
   const [res] = await pool.execute<ResultSetHeader>(sql, params);
   return res;
 }
+ */

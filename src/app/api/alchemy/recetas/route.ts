@@ -1,6 +1,6 @@
 // src/app/api/alchemy/recetas/route.ts
 import { NextResponse } from "next/server";
-import { query } from "@/lib/mysql";
+import { query } from "@/lib/db";
 import type { VAlchemyProporcioneRow } from "@/entidades/alchemy";
 
 export async function GET() {

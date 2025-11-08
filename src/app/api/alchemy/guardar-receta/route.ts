@@ -1,15 +1,12 @@
 // src/app/api/alchemy/guardar-receta/route.ts
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
-import { execute, query } from "@/lib/mysql";
+import { execute, query } from "@/lib/db";
 import type { RecetasViewFinal, ElementoRow } from "@/entidades/alchemy";
 
 export async function POST(req: Request) {
-  let receta: RecetasViewFinal | null = null;
-  try {
-    receta = (await req.json()) as RecetasViewFinal;
-  } catch {
-    receta = null;
-  }
+  const receta = (await req.json().catch(() => null)) as RecetasViewFinal | null;
 
   if (
     !receta ||
@@ -17,33 +14,64 @@ export async function POST(req: Request) {
     !Array.isArray(receta.Elementos) ||
     receta.Elementos.length === 0
   ) {
-    return NextResponse.json({ error: "Receta inválida" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Receta inválida" },
+      { status: 400 }
+    );
   }
 
-  // 1) Crear Producto
-  const rProd = await execute(
-    `INSERT INTO Productos (nombre, descripcion, toxicidad) VALUES (?, ?, ?)`,
-    [receta.NombreProducto.trim(), receta.Descripcion ?? null, 1]
+  const nombreProducto = receta.NombreProducto.trim();
+  const descripcion = receta.Descripcion ?? null;
+
+  // 1) Crear Producto (Postgres: RETURNING)
+  const prodRows = await query<{ id_producto: number }>(
+    `INSERT INTO "Productos" (nombre, descripcion, toxicidad)
+     VALUES ($1, $2, $3)
+     RETURNING id_producto`,
+    [nombreProducto, descripcion, 1]
   );
-  const idProducto = rProd.insertId;
 
-  // 2) Insertar relaciones (solo válidas)
-  for (const item of receta.Elementos) {
-    const nombre = (item?.NombreElemento || "").trim();
-    const prop = Number(item?.ProporcionElemento || 0);
-    if (!nombre || !Number.isFinite(prop) || prop <= 0) continue;
-
-    const elem = await query<ElementoRow[]>(
-      `SELECT id_elemento FROM Elementos WHERE nombre = ? LIMIT 1`,
-      [nombre]
+  if (!prodRows.length) {
+    return NextResponse.json(
+      { error: "No se pudo crear el producto" },
+      { status: 500 }
     );
-    if (!elem.length) continue;
+  }
+
+  const idProducto = prodRows[0].id_producto;
+
+  // 2) Insertar relaciones válidas
+  for (const item of receta.Elementos) {
+    const nombreElemento = (item?.NombreElemento || "").trim();
+    const proporcion = Number(item?.ProporcionElemento ?? 0);
+
+    if (!nombreElemento || !Number.isFinite(proporcion) || proporcion <= 0) {
+      continue;
+    }
+
+    const elemRows = await query<ElementoRow>(
+      `SELECT id_elemento
+         FROM "Elementos"
+        WHERE nombre = $1
+        LIMIT 1`,
+      [nombreElemento]
+    );
+
+    if (!elemRows.length) {
+      continue;
+    }
+
+    const idElemento = elemRows[0].id_elemento;
 
     await execute(
-      `INSERT INTO Recetas_producto_elemento (id_producto, id_elemento, proporcion) VALUES (?, ?, ?)`,
-      [idProducto, elem[0].id_elemento, prop]
+      `INSERT INTO "Recetas_producto_elemento" (id_producto, id_elemento, proporcion)
+       VALUES ($1, $2, $3)`,
+      [idProducto, idElemento, proporcion]
     );
   }
 
-  return NextResponse.json({ id_producto: idProducto }, { status: 201 });
+  return NextResponse.json(
+    { id_producto: idProducto },
+    { status: 201 }
+  );
 }

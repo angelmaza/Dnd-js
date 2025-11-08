@@ -1,5 +1,4 @@
 // src/entidades/db.ts
-import type { RowDataPacket } from "mysql2/promise";
 
 /** Útil para columnas BOOLEAN/TINYINT(1) que devolvemos como 0|1 */
 export type BoolTiny = 0 | 1;
@@ -7,14 +6,14 @@ export type BoolTiny = 0 | 1;
 /* ========== TABLAS ========== */
 
 /** Tabla: Dinero */
-export interface DineroRow extends RowDataPacket {
+export interface DineroRow {
   id_moneda: number;
   nombre: string | null;
   cantidad: number | null;
 }
 
 /** Tabla: Elementos */
-export interface ElementoRow extends RowDataPacket {
+export interface ElementoRow {
   id_elemento: number;
   nombre: string | null;
   color: string | null;
@@ -22,14 +21,14 @@ export interface ElementoRow extends RowDataPacket {
 }
 
 /** Tabla: Inventario */
-export interface InventarioRow extends RowDataPacket {
+export interface InventarioRow {
   id_item: number;
   nombre: string | null;
   info_item: string | null; // VARCHAR(250)
 }
 
 /** Tabla: Productos */
-export interface ProductoRow extends RowDataPacket {
+export interface ProductoRow {
   id_producto: number;
   nombre: string | null;        // VARCHAR(20)
   toxicidad: number | null;     // INT
@@ -37,7 +36,7 @@ export interface ProductoRow extends RowDataPacket {
 }
 
 /** Tabla: Personajes */
-export interface PersonajeRow extends RowDataPacket {
+export interface PersonajeRow {
   id_pj: number;
   nombre: string | null;
   informacion: string | null;   // VARCHAR(1000)
@@ -46,17 +45,17 @@ export interface PersonajeRow extends RowDataPacket {
 }
 
 /** Tabla: Npcs */
-export interface NpcRow extends RowDataPacket {
+export interface NpcRow {
   id_npc: number;
   nombre: string | null;
   imagen: string | null;
   imagen_fondo: string | null;
-  informacion: string | null;   // LONGTEXT (string en TS)
+  informacion: string | null;   // LONGTEXT
   clasificacion: string | null;
 }
 
 /** Tabla: Misiones */
-export interface MisionRow extends RowDataPacket {
+export interface MisionRow {
   id_mision: number;
   titulo: string | null;
   zona: string | null;
@@ -64,18 +63,18 @@ export interface MisionRow extends RowDataPacket {
   descripcion: string | null;   // VARCHAR(1000)
   importancia: number | null;   // INT
   recompensa: string | null;    // VARCHAR(250)
-  completada: BoolTiny;         // BOOLEAN -> 0 | 1
+  completada: BoolTiny;         // 0 | 1
 }
 
 /** Tabla: Materiales */
-export interface MaterialRow extends RowDataPacket {
+export interface MaterialRow {
   id_material: number;
   nombre: string | null;
   cantidad: number | null;
 }
 
 /** Tabla: Mats_extraidos */
-export interface MatsExtraidoRow extends RowDataPacket {
+export interface MatsExtraidoRow {
   id: number;
   id_material: number | null;   // FK -> Materiales.id_material
   id_elemento: number | null;   // FK -> Elementos.id_elemento
@@ -83,7 +82,7 @@ export interface MatsExtraidoRow extends RowDataPacket {
 }
 
 /** Tabla: Inventario_Y_Portador */
-export interface InventarioYPortadorRow extends RowDataPacket {
+export interface InventarioYPortadorRow {
   id_asignacion: number;
   id_item: number;              // FK -> Inventario.id_item
   id_personaje: number;         // FK -> Personajes.id_pj
@@ -91,7 +90,7 @@ export interface InventarioYPortadorRow extends RowDataPacket {
 }
 
 /** Tabla: Pocion_Y_Portador */
-export interface PocionYPortadorRow extends RowDataPacket {
+export interface PocionYPortadorRow {
   id_asignacion: number;
   id_item: number;              // FK -> Productos.id_producto
   id_personaje: number;         // FK -> Personajes.id_pj
@@ -99,7 +98,7 @@ export interface PocionYPortadorRow extends RowDataPacket {
 }
 
 /** Tabla: Recetas_producto_elemento */
-export interface RecetaProductoElementoRow extends RowDataPacket {
+export interface RecetaProductoElementoRow {
   id: number;
   id_producto: number | null;   // FK -> Productos.id_producto
   id_elemento: number | null;   // FK -> Elementos.id_elemento
@@ -107,17 +106,16 @@ export interface RecetaProductoElementoRow extends RowDataPacket {
 }
 
 /** Tabla: Lore */
-export interface LoreRow extends RowDataPacket {
+export interface LoreRow {
   id_lore: number;
   titulo: string | null;
   texto: string | null;         // LONGTEXT
 }
 
 /* ========== VISTAS ========== */
-/* OJO: las propiedades respetan exactamente los alias/nombres definidos en la vista */
 
 /** Vista: V_ALCHEMY_PROPORCIONES */
-export interface VAlchemyProporcionesRow extends RowDataPacket {
+export interface VAlchemyProporcionesRow {
   Id: number;                   // id_producto
   NombreProducto: string | null;
   NombreElemento: string | null;
@@ -127,17 +125,18 @@ export interface VAlchemyProporcionesRow extends RowDataPacket {
 }
 
 /** Vista: V_Equipaje_Personajes */
-export interface VEquipajePersonajesRow extends RowDataPacket {
+export interface VEquipajePersonajesRow {
   id_pj: number;
-  IdItemOPocion: number;        // item o poción según el registro
-  Personaje: string | null;     // nombre del personaje
-  Nombre: string | null;        // nombre del item/poción
-  info_item: string | null;     // info del item o descripcion del producto
-  Toxicidad: number | null;     // NULL para items, valor para pociones
+  IdItemOPocion: number;
+  Personaje: string | null;
+  Nombre: string | null;
+  info_item: string | null;
+  Toxicidad: number | null;
   Cantidad: number | null;
   Tipo: string | null;          // 'Item' | 'Pocion'
 }
 
-interface CantidadRow extends RowDataPacket {
+/** Uso puntual para SELECT cantidad FROM ... */
+export interface CantidadRow {
   cantidad: number;
 }

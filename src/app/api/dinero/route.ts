@@ -1,6 +1,6 @@
 // src/app/api/dinero/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { query, execute } from "@/lib/mysql";
+import { query, execute } from "@/lib/db";
 import type { DineroRow } from "@/entidades/db";
 
 /** GET /api/dinero — lista todas las monedas */
@@ -31,7 +31,7 @@ export async function PUT(req: NextRequest) {
     }
     const cantidad = m.cantidad ?? 0;
     await execute(
-      `UPDATE Dinero SET cantidad = ? WHERE id_moneda = ?`,
+      `UPDATE Dinero SET cantidad = $1 WHERE id_moneda = $2`,
       [cantidad, m.id_moneda]
     );
   }

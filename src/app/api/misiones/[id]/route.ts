@@ -2,7 +2,7 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import { query, execute } from "@/lib/mysql";
+import { query, execute } from "@/lib/db";
 import type { MisionRow } from "@/entidades/db";
 
 // GET /api/misiones/[id]

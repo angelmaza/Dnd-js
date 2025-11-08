@@ -2,7 +2,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { query, execute } from "@/lib/mysql";
+import { query, execute } from "@/lib/db";
 import type { PersonajeRow } from "@/entidades/db";
 
 // GET /api/personajes/:id  -> detalle personaje
@@ -17,14 +17,15 @@ export async function GET(
     return NextResponse.json({ error: "id inválido" }, { status: 400 });
   }
 
-  const rows = await query<PersonajeRow[]>(
+  const rows = await query<PersonajeRow>(
     `SELECT id_pj, nombre, informacion, imagen, imagen_fondo
-     FROM Personajes
-     WHERE id_pj = ? LIMIT 1`,
+       FROM "Personajes"
+      WHERE id_pj = $1
+      LIMIT 1`,
     [numId]
   );
 
-  if (!rows.length) {
+  if (rows.length === 0) {
     return NextResponse.json({ error: "No encontrado" }, { status: 404 });
   }
 
@@ -43,7 +44,19 @@ export async function PUT(
     return NextResponse.json({ error: "id inválido" }, { status: 400 });
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = (await req.json().catch(() => null)) as {
+    nombre?: string;
+    informacion?: string | null;
+    imagen?: string | null;
+    imagen_fondo?: string | null;
+  } | null;
+
+  if (!body) {
+    return NextResponse.json(
+      { error: "Body inválido" },
+      { status: 400 }
+    );
+  }
 
   const nombre =
     typeof body.nombre === "string" ? body.nombre.trim() : undefined;
@@ -55,13 +68,13 @@ export async function PUT(
     body.imagen_fondo === undefined ? undefined : body.imagen_fondo ?? null;
 
   try {
-    await execute(
-      `UPDATE Personajes
-       SET nombre        = COALESCE(?, nombre),
-           informacion   = COALESCE(?, informacion),
-           imagen        = COALESCE(?, imagen),
-           imagen_fondo  = COALESCE(?, imagen_fondo)
-       WHERE id_pj = ?`,
+    const res = await execute(
+      `UPDATE "Personajes"
+          SET nombre        = COALESCE($1, nombre),
+              informacion   = COALESCE($2, informacion),
+              imagen        = COALESCE($3, imagen),
+              imagen_fondo  = COALESCE($4, imagen_fondo)
+        WHERE id_pj = $5`,
       [
         nombre === undefined ? null : nombre,
         informacion === undefined ? null : informacion,
@@ -70,6 +83,10 @@ export async function PUT(
         numId,
       ]
     );
+
+    if (res.rowCount === 0) {
+      return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
@@ -94,13 +111,13 @@ export async function DELETE(
   }
 
   const result = await execute(
-    `DELETE FROM Personajes WHERE id_pj = ?`,
+    `DELETE FROM "Personajes" WHERE id_pj = $1`,
     [numId]
   );
 
-  if (!result.affectedRows) {
+  if (result.rowCount === 0) {
     return NextResponse.json({ error: "No encontrado" }, { status: 404 });
   }
 
-  return NextResponse.json({ affectedRows: result.affectedRows });
+  return NextResponse.json({ affectedRows: result.rowCount });
 }
