@@ -1,13 +1,13 @@
-import type { RowDataPacket } from "mysql2/promise";
+// src/entidades/alchemy.ts
 
-export interface ElementoRow extends RowDataPacket {
+export interface ElementoRow {
   id_elemento: number;
   nombre: string;
   cantidad: number | null;
   color?: string | null;
 }
 
-export interface VAlchemyProporcioneRow extends RowDataPacket {
+export interface VAlchemyProporcioneRow {
   // vista V_ALCHEMY_PROPORCIONES (ajusta a tus columnas reales)
   Id: number;                     // id_producto
   NombreProducto: string | null;
@@ -17,14 +17,14 @@ export interface VAlchemyProporcioneRow extends RowDataPacket {
   Descripcion: string | null;
 }
 
-export interface ProductoRow extends RowDataPacket {
+export interface ProductoRow {
   id_producto: number;
   nombre: string;
   descripcion: string | null;
   toxicidad: number | null;
 }
 
-export interface PocionYPortadorRow extends RowDataPacket {
+export interface PocionYPortadorRow {
   id_asignacion: number;
   id_item: number;
   id_personaje: number;
@@ -32,6 +32,7 @@ export interface PocionYPortadorRow extends RowDataPacket {
 }
 
 /* Payloads */
+
 export type VItemReceta = {
   NombreElemento: string;
   ProporcionElemento: number;
