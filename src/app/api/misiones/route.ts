@@ -50,17 +50,18 @@ export async function POST(req: Request) {
     body?.importancia !== undefined && body.importancia !== null
       ? Number(body.importancia)
       : 1;
-  const recompensa = body?.recompensa ?? null;
-  const completada =
-    body?.completada === true || body?.completada === 1 ? 1 : 0;
+  const recompensa = body?.recompensa ?? null
+  
+const completada =
+  body?.completada === true || body?.completada === 1 ? true : false;
 
-  const inserted = await query<{ id_mision: number }>(
-    `INSERT INTO "Misiones"
-       (titulo, zona, npc, descripcion, importancia, recompensa, completada)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING id_mision`,
-    [titulo, zona, npc, descripcion, importancia, recompensa, completada]
-  );
+const inserted = await query<{ id_mision: number }>(
+  `INSERT INTO "Misiones"
+     (titulo, zona, npc, descripcion, importancia, recompensa, completada)
+   VALUES ($1, $2, $3, $4, $5, $6, $7)
+   RETURNING id_mision`,
+  [titulo, zona, npc, descripcion, importancia, recompensa, completada]
+);
 
   return NextResponse.json(
     { id: inserted[0].id_mision },

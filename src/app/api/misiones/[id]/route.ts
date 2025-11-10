@@ -16,19 +16,34 @@ export async function GET(
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
-  const rows = await query<MisionRow>(
-    `SELECT id_mision, titulo, zona, npc, descripcion, importancia, recompensa, completada
-       FROM "Misiones"
-      WHERE id_mision = $1
-      LIMIT 1`,
-    [numId]
-  );
+  try {
+    const rows = await query<MisionRow>(
+      `SELECT id_mision,
+              titulo,
+              zona,
+              npc,
+              descripcion,
+              importancia,
+              recompensa,
+              completada
+         FROM "Misiones"
+        WHERE id_mision = $1
+        LIMIT 1`,
+      [numId]
+    );
 
-  if (!rows || rows.length === 0) {
-    return NextResponse.json({ error: "No encontrada" }, { status: 404 });
+    if (!rows || rows.length === 0) {
+      return NextResponse.json({ error: "No encontrada" }, { status: 404 });
+    }
+
+    return NextResponse.json(rows[0]);
+  } catch (err) {
+    console.error("Error consultando misión:", err);
+    return NextResponse.json(
+      { error: "Error obteniendo misión" },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json(rows[0]);
 }
 
 // PUT /api/misiones/[id]
@@ -43,7 +58,6 @@ export async function PUT(
   }
 
   const body = await req.json().catch(() => null);
-
   if (!body || typeof body !== "object") {
     return NextResponse.json(
       { error: "Cuerpo inválido" },
@@ -51,21 +65,35 @@ export async function PUT(
     );
   }
 
-  const fields = {
-    titulo: body.titulo ?? null,
-    zona: body.zona ?? null,
-    npc: body.npc ?? null,
-    descripcion: body.descripcion ?? null,
-    importancia:
-      body.importancia === null || body.importancia === undefined
-        ? null
-        : Number(body.importancia),
-    recompensa: body.recompensa ?? null,
-    completada:
-      body.completada === 1 || body.completada === true ? 1 :
-      body.completada === 0 || body.completada === false ? 0 :
-      null,
-  };
+  // Normalizamos campos
+  const titulo =
+    typeof body.titulo === "string" ? body.titulo.trim() : null;
+  const zona =
+    typeof body.zona === "string" ? body.zona.trim() : null;
+  const npc =
+    typeof body.npc === "string" ? body.npc.trim() : null;
+  const descripcion =
+    typeof body.descripcion === "string"
+      ? body.descripcion.trim()
+      : null;
+  const importancia =
+    body.importancia === null || body.importancia === undefined || body.importancia === ""
+      ? null
+      : Number(body.importancia);
+  const recompensa =
+    typeof body.recompensa === "string"
+      ? body.recompensa.trim()
+      : null;
+
+  // completada -> boolean | null (si no viene, no se toca)
+  let completada: boolean | null = null;
+  if (typeof body.completada === "boolean") {
+    completada = body.completada;
+  } else if (body.completada === 1) {
+    completada = true;
+  } else if (body.completada === 0) {
+    completada = false;
+  }
 
   try {
     await execute(
@@ -79,13 +107,13 @@ export async function PUT(
               completada  = COALESCE($7, completada)
         WHERE id_mision   = $8`,
       [
-        fields.titulo,
-        fields.zona,
-        fields.npc,
-        fields.descripcion,
-        fields.importancia,
-        fields.recompensa,
-        fields.completada,
+        titulo,
+        zona,
+        npc,
+        descripcion,
+        importancia,
+        recompensa,
+        completada,
         numId,
       ]
     );
@@ -113,7 +141,8 @@ export async function DELETE(
 
   try {
     await execute(
-      `DELETE FROM "Misiones" WHERE id_mision = $1`,
+      `DELETE FROM "Misiones"
+        WHERE id_mision = $1`,
       [numId]
     );
 

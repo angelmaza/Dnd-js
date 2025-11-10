@@ -164,7 +164,7 @@ export default function NpcsPage() {
                       <div>
                         <div style={{ fontWeight: 700 }}>{n.nombre ?? "Sin nombre"}</div>
                         <div className="muted" style={{ fontSize: 12 }}>
-                          {n.clasificacion ?? "—"}
+                          {n.clasificacion ?? ""}
                         </div>
                       </div>
                     </div>
@@ -172,7 +172,7 @@ export default function NpcsPage() {
 
                   <div style={{ padding: "0.8rem 1rem 1rem" }}>
                     <p className="muted" style={{ margin: 0 }}>
-                      {n.informacion ? (n.informacion.length > 120 ? n.informacion.slice(0, 120) + "…" : n.informacion) : "Sin información"}
+                      {n.informacion ? (n.informacion.length > 120 ? n.informacion.slice(0, 120) + "…" : n.informacion) : ""}
                     </p>
                   </div>
                 </div>
