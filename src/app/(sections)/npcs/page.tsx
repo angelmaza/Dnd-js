@@ -203,7 +203,7 @@ export default function NpcsPage() {
                   {viewing.imagen ? (
                     <img
                       alt={viewing.nombre ?? ""}
-                      src={viewing.imagen.startsWith("/") ? viewing.imagen : `/Tokens/${viewing.imagen}`}
+                      src={viewing.imagen.startsWith("/") ? viewing.imagen : `/tokens/${viewing.imagen}`}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
                   ) : (
