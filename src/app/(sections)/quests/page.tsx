@@ -1,4 +1,4 @@
-// src/app/page.tsx
+// src/app/(sections)/quests.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -12,29 +12,19 @@ type Mision = {
   completada: 0 | 1 | boolean;
 };
 
-type Personaje = {
-  id_pj: number;
-  nombre: string;
-  informacion: string | null;
-};
+
 
 export default function Page() {
   const router = useRouter();
 
   const [misiones, setMisiones] = useState<Mision[]>([]);
-  const [personajes, setPersonajes] = useState<Personaje[]>([]);
   const [modalMisionOpen, setModalMisionOpen] = useState(false);
   const [modalPjOpen, setModalPjOpen] = useState(false);
-
   const [newMision, setNewMision] = useState({
     titulo: "",
     zona: "",
     npc: "",
     descripcion: "",
-  });
-  const [newPj, setNewPj] = useState({
-    nombre: "",
-    informacion: "",
   });
 
   // Carga inicial (cliente) → consume los endpoints
@@ -44,19 +34,12 @@ export default function Page() {
         const r1 = await fetch("/api/misiones", { cache: "no-store" });
         if (r1.ok) setMisiones(await r1.json());
       } catch {}
-
-      try {
-        const r2 = await fetch("/api/personajes", { cache: "no-store" });
-        if (r2.ok) setPersonajes(await r2.json());
-      } catch {}
     })();
   }, []);
 
   const hayMisiones = misiones.length > 0;
-  const hayPersonajes = personajes.length > 0;
 
   const irAMision = (m: Mision) => router.push(`/misiones/${m.id_mision}`);
-  const irAPersonaje = (p: Personaje) => router.push(`/personajes/${p.id_pj}`);
 
   // POST: crear misión
   const crearMision = async () => {
@@ -94,32 +77,6 @@ export default function Page() {
     }
   };
 
-  // POST: crear personaje
-  const crearPj = async () => {
-    const body = {
-      nombre: newPj.nombre.trim(),
-      informacion: newPj.informacion.trim(),
-      imagen: null,
-      imagen_fondo: null,
-    };
-    if (!body.nombre) return;
-
-    const res = await fetch("/api/personajes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    if (res.ok) {
-      const creado = await res.json();
-      setPersonajes((prev) => [
-        ...prev,
-        { id_pj: creado.id, nombre: body.nombre, informacion: body.informacion },
-      ]);
-      setModalPjOpen(false);
-      setNewPj({ nombre: "", informacion: "" });
-    }
-  };
 
   return (
     <section>
@@ -168,44 +125,9 @@ export default function Page() {
         </div>
       )}
 
-      {/* PERSONAJES */}
-      {hayPersonajes && (
-        <div className="panel">
-          <div className="panel-head">
-            <h2>Personajes</h2>
-            <button className="btn-accent" onClick={() => setModalPjOpen(true)}>
-              Nuevo personaje
-            </button>
-          </div>
-          <div className="table-wrap">
-            <table className="table-medieval">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Información</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {personajes.map((p) => (
-                  <tr key={p.id_pj}>
-                    <td>{p.nombre}</td>
-                    <td className="muted">{p.informacion ?? "-"}</td>
-                    <td>
-                      <button className="btn-ghost" onClick={() => irAPersonaje(p)}>
-                        Ver
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {/* Estado vacío */}
-      {!hayMisiones && !hayPersonajes && (
+      {!hayMisiones  && (
         <div className="empty">
           <p>No hay datos todavía. Crea tu primera misión o personaje.</p>
           <div className="actions">
@@ -247,29 +169,7 @@ export default function Page() {
         </div>
       )}
 
-      {/* MODAL: Nuevo Personaje */}
-      {modalPjOpen && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <div className="modal-header">
-              <h3>Nuevo personaje</h3>
-              <button className="btn" onClick={() => setModalPjOpen(false)}>
-                ✖
-              </button>
-            </div>
-            <div className="modal-body">
-              <label>Nombre</label>
-              <input value={newPj.nombre} onChange={(e) => setNewPj({ ...newPj, nombre: e.target.value })} />
-              <label>Información</label>
-              <textarea value={newPj.informacion} onChange={(e) => setNewPj({ ...newPj, informacion: e.target.value })} />
-            </div>
-            <div className="modal-actions">
-              <button className="btn" onClick={() => setModalPjOpen(false)}>Cancelar</button>
-              <button className="btn btn-accent" onClick={crearPj}>Crear</button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </section>
   );
 }

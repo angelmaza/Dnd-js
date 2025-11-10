@@ -5,14 +5,14 @@ import { usePathname } from "next/navigation";
 
 const indice_lateral = [
   { href: "/",          label: "Lore",      icon: "🏰" },
-  { href: "/quests",label: "Misiones",      icon: "🎒" },
+  { href: "/quests",    label: "Misiones",  icon: "📜" },
+  { href: "/nosotros",  label: "Nosotros",  icon: "🤝" },
   { href: "/npcs",      label: "NPCs",      icon: "🧙‍♂️" },    
   { href: "/alchemy",   label: "Alchemy",   icon: "⚗️" }, 
   { href: "/equipaje",  label: "Equipaje",  icon: "🧳" }, 
   { href: "/barovia",   label: "Barovia",   icon: "🧛‍♂️" }, 
   { href: "/dinero",    label: "Dinero",    icon: "💰" },
   //{ href: "/inventario",label: "Inventario",icon: "🎒" }, 
-
 ];
 
 export default function NavMenu() {
