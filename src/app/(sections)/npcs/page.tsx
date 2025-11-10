@@ -154,7 +154,7 @@ export default function NpcsPage() {
                         {n.imagen ? (
                           <img
                             alt={n.nombre ?? ""}
-                            src={n.imagen.startsWith("/") ? n.imagen : `/Tokens/${n.imagen}`}
+                            src={n.imagen.startsWith("/") ? n.imagen : `/tokens/${n.imagen}`}
                             style={{ width: "100%", height: "100%", objectFit: "cover" }}
                           />
                         ) : (
@@ -186,7 +186,7 @@ export default function NpcsPage() {
       {viewing && (
         <div className="modal-overlay">
           <div className="modal-card" style={{
-            backgroundImage: viewing.imagen_fondo ? `url(${viewing.imagen_fondo.startsWith("/") ? viewing.imagen_fondo : `/Images/${viewing.imagen_fondo}`})` : undefined,
+            backgroundImage: viewing.imagen_fondo ? `url(${viewing.imagen_fondo.startsWith("/") ? viewing.imagen_fondo : `/images/${viewing.imagen_fondo}`})` : undefined,
             backgroundSize: "cover",
             backgroundPosition: "center"
           }}>
@@ -242,10 +242,10 @@ export default function NpcsPage() {
               <textarea value={formInformacion} onChange={(e) => setFormInformacion(e.target.value)} />
 
               <label>Imagen (token)</label>
-              <input placeholder="/Tokens/strigoi.png o strigoi.png" value={formImagen} onChange={(e) => setFormImagen(e.target.value)} />
+              <input placeholder="/tokens/strigoi.png o strigoi.png" value={formImagen} onChange={(e) => setFormImagen(e.target.value)} />
 
               <label>Imagen de fondo</label>
-              <input placeholder="/Images/bg.jpg o bg.jpg" value={formImagenFondo} onChange={(e) => setFormImagenFondo(e.target.value)} />
+              <input placeholder="/images/bg.jpg o bg.jpg" value={formImagenFondo} onChange={(e) => setFormImagenFondo(e.target.value)} />
             </div>
             <div className="modal-actions">
               <button className="btn-ghost" onClick={cerrarForm}>Cancelar</button>
