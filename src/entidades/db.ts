@@ -12,6 +12,8 @@ export interface DineroRow {
   cantidad: number | null;
 }
 
+
+
 /** Tabla: Elementos */
 export interface ElementoRow {
   id_elemento: number;

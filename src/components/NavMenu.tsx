@@ -4,13 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const indice_lateral = [
-  { href: "/",          label: "Home",      icon: "🏰" },  
+  { href: "/",          label: "Lore",      icon: "🏰" },
+  { href: "/quests",label: "Misiones",      icon: "🎒" },
+  { href: "/npcs",      label: "NPCs",      icon: "🧙‍♂️" },    
   { href: "/alchemy",   label: "Alchemy",   icon: "⚗️" }, 
-  { href: "/inventario",label: "Inventario",icon: "🎒" }, 
   { href: "/equipaje",  label: "Equipaje",  icon: "🧳" }, 
-  { href: "/npcs",      label: "NPCs",      icon: "🧙‍♂️" }, 
   { href: "/barovia",   label: "Barovia",   icon: "🧛‍♂️" }, 
   { href: "/dinero",    label: "Dinero",    icon: "💰" },
+  //{ href: "/inventario",label: "Inventario",icon: "🎒" }, 
 
 ];
 

@@ -1,275 +1,344 @@
 // src/app/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, FormEvent } from "react";
 
-type Mision = {
-  id_mision: number;
+type Lore = {
+  id_lore: number;
   titulo: string;
-  zona: string | null;
-  npc: string | null;
-  completada: 0 | 1 | boolean;
-};
-
-type Personaje = {
-  id_pj: number;
-  nombre: string;
-  informacion: string | null;
+  texto: string | null;
 };
 
 export default function Page() {
-  const router = useRouter();
+  const [lore, setLore] = useState<Lore[]>([]);
+  const [openId, setOpenId] = useState<number | null>(null);
 
-  const [misiones, setMisiones] = useState<Mision[]>([]);
-  const [personajes, setPersonajes] = useState<Personaje[]>([]);
-  const [modalMisionOpen, setModalMisionOpen] = useState(false);
-  const [modalPjOpen, setModalPjOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [newMision, setNewMision] = useState({
-    titulo: "",
-    zona: "",
-    npc: "",
-    descripcion: "",
-  });
-  const [newPj, setNewPj] = useState({
-    nombre: "",
-    informacion: "",
-  });
+  // Crear
+  const [newTitulo, setNewTitulo] = useState("");
+  const [newTexto, setNewTexto] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
-  // Carga inicial (cliente) → consume los endpoints
+  // Editar
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editTitulo, setEditTitulo] = useState("");
+  const [editTexto, setEditTexto] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  // ===== CARGAR LORE =====
+  async function loadLore() {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch("/api/lore", { cache: "no-store" });
+      if (!res.ok) throw new Error("No se pudo cargar el lore");
+      const data: Lore[] = await res.json();
+      setLore(data);
+    } catch (err) {
+      console.error(err);
+      setError("No se ha podido cargar el lore.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    (async () => {
-      try {
-        const r1 = await fetch("/api/misiones", { cache: "no-store" });
-        if (r1.ok) setMisiones(await r1.json());
-      } catch {}
-
-      try {
-        const r2 = await fetch("/api/personajes", { cache: "no-store" });
-        if (r2.ok) setPersonajes(await r2.json());
-      } catch {}
-    })();
+    loadLore();
   }, []);
 
-  const hayMisiones = misiones.length > 0;
-  const hayPersonajes = personajes.length > 0;
+  const hasLore = lore.length > 0;
 
-  const irAMision = (m: Mision) => router.push(`/misiones/${m.id_mision}`);
-  const irAPersonaje = (p: Personaje) => router.push(`/personajes/${p.id_pj}`);
+  // ===== CREAR NUEVO =====
+  async function handleCreate(e: FormEvent) {
+    e.preventDefault();
+    setCreateError(null);
 
-  // POST: crear misión
-  const crearMision = async () => {
-    const body = {
-      titulo: newMision.titulo.trim(),
-      zona: newMision.zona.trim(),
-      npc: newMision.npc.trim(),
-      descripcion: newMision.descripcion.trim(),
-      importancia: 1,
-      recompensa: "",
-      completada: 0,
-    };
-    if (!body.titulo) return;
+    const titulo = newTitulo.trim();
+    const texto = newTexto.trim() || null;
 
-    const res = await fetch("/api/misiones", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    if (res.ok) {
-      const creada = await res.json();
-      setMisiones((prev) => [
-        ...prev,
-        {
-          id_mision: creada.id,
-          titulo: body.titulo,
-          zona: body.zona,
-          npc: body.npc,
-          completada: 0,
-        },
-      ]);
-      setModalMisionOpen(false);
-      setNewMision({ titulo: "", zona: "", npc: "", descripcion: "" });
+    if (!titulo) {
+      setCreateError("El título es obligatorio.");
+      return;
     }
-  };
 
-  // POST: crear personaje
-  const crearPj = async () => {
-    const body = {
-      nombre: newPj.nombre.trim(),
-      informacion: newPj.informacion.trim(),
-      imagen: null,
-      imagen_fondo: null,
-    };
-    if (!body.nombre) return;
+    try {
+      setCreating(true);
 
-    const res = await fetch("/api/personajes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+      const res = await fetch("/api/lore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ titulo, texto }),
+      });
 
-    if (res.ok) {
-      const creado = await res.json();
-      setPersonajes((prev) => [
-        ...prev,
-        { id_pj: creado.id, nombre: body.nombre, informacion: body.informacion },
-      ]);
-      setModalPjOpen(false);
-      setNewPj({ nombre: "", informacion: "" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({} as any));
+        throw new Error(data.error || "No se pudo crear el capítulo.");
+      }
+
+      const created = (await res.json()) as Lore;
+
+      setLore((prev) => [...prev, created]);
+      setNewTitulo("");
+      setNewTexto("");
+      setCreateOpen(false);
+      setOpenId(created.id_lore);
+    } catch (err) {
+      console.error(err);
+      setCreateError("Error al crear el capítulo.");
+    } finally {
+      setCreating(false);
     }
-  };
+  }
+
+  // ===== EDITAR =====
+  function startEdit(entry: Lore) {
+    setEditingId(entry.id_lore);
+    setEditTitulo(entry.titulo);
+    setEditTexto(entry.texto ?? "");
+    setEditError(null);
+    setOpenId(entry.id_lore);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditTitulo("");
+    setEditTexto("");
+    setEditError(null);
+  }
+
+  async function handleSaveEdit(e: FormEvent, entry: Lore) {
+    e.preventDefault();
+    setEditError(null);
+
+    const titulo = editTitulo.trim();
+    const texto = editTexto.trim() || null;
+
+    if (!titulo) {
+      setEditError("El título no puede quedar vacío.");
+      return;
+    }
+
+    try {
+      setSavingEdit(true);
+
+      const res = await fetch("/api/lore", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id_lore: entry.id_lore,
+          titulo,
+          texto,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({} as any));
+        throw new Error(data.error || "No se pudo guardar la edición.");
+      }
+
+      setLore((prev) =>
+        prev.map((l) =>
+          l.id_lore === entry.id_lore ? { ...l, titulo, texto } : l
+        )
+      );
+
+      setEditingId(null);
+      setEditTitulo("");
+      setEditTexto("");
+    } catch (err) {
+      console.error(err);
+      setEditError("Error al guardar cambios.");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
 
   return (
     <section>
-      <h1>Bienvenido a Barovia</h1>
-      <p>
-        Entre nieblas y colmillos, tu diario de campaña cobra vida. Revisa misiones, gestiona personajes y registra nuevas hazañas.
-      </p>
+      <h1>Crónicas de Barovia</h1>
 
-      {/* MISIONES */}
-      {hayMisiones && (
-        <div className="panel">
-          <div className="panel-head">
-            <h2>Misiones</h2>
-            <button className="btn-accent" onClick={() => setModalMisionOpen(true)}>
-              Nueva misión
-            </button>
-          </div>
-          <div className="table-wrap">
-            <table className="table-medieval">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Zona</th>
-                  <th>Npc</th>
-                  <th>Completada</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {misiones.map((m) => (
-                  <tr key={m.id_mision}>
-                    <td>{m.titulo}</td>
-                    <td>{m.zona ?? "-"}</td>
-                    <td>{m.npc ?? "-"}</td>
-                    <td>{(m.completada ? 1 : 0) === 1 ? "Sí" : "No"}</td>
-                    <td>
-                      <button className="btn-ghost" onClick={() => irAMision(m)}>
-                        Ver
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {/* LISTA LORE */}
+      <div className="panel">
+        <div className="panel-head">
+          <h2>Registro de Lore</h2>
+          {hasLore && (
+            <span className="muted">
+              {lore.length} entrada{lore.length !== 1 && "s"}
+            </span>
+          )}
         </div>
-      )}
 
-      {/* PERSONAJES */}
-      {hayPersonajes && (
-        <div className="panel">
-          <div className="panel-head">
-            <h2>Personajes</h2>
-            <button className="btn-accent" onClick={() => setModalPjOpen(true)}>
-              Nuevo personaje
-            </button>
-          </div>
-          <div className="table-wrap">
-            <table className="table-medieval">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Información</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {personajes.map((p) => (
-                  <tr key={p.id_pj}>
-                    <td>{p.nombre}</td>
-                    <td className="muted">{p.informacion ?? "-"}</td>
-                    <td>
-                      <button className="btn-ghost" onClick={() => irAPersonaje(p)}>
-                        Ver
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="lore-list">
+          {loading && <div className="empty">Cargando capítulos...</div>}
+
+          {!loading && error && <div className="empty">{error}</div>}
+
+          {!loading && !error && !hasLore && (
+            <div className="empty">
+              Aún no hay historias registradas.
+              <div className="actions">
+                <span className="muted">
+                  Cuando descubráis algo digno de temer, anotadlo aquí.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {!loading &&
+            !error &&
+            hasLore &&
+            lore.map((entry) => {
+              const isOpen = openId === entry.id_lore;
+              const isEditing = editingId === entry.id_lore;
+
+              return (
+                <article
+                  key={entry.id_lore}
+                  className={`lore-item ${isOpen ? "open" : ""}`}
+                >
+                  <button
+                    type="button"
+                    className="lore-toggle"
+                    onClick={() =>
+                      setOpenId(isOpen ? null : entry.id_lore)
+                    }
+                  >
+                    <span className="lore-title">{entry.titulo}</span>
+                    <span className="lore-icon">
+                      {isOpen ? "▾" : "▸"}
+                    </span>
+                  </button>
+
+                  {isOpen && (
+                    <div className="lore-body">
+                      {!isEditing && (
+                        <>
+                          <p className="lore-text">
+                            {entry.texto?.trim() ||
+                              "Sin detalles registrados."}
+                          </p>
+                          <div className="media-actions">
+                            <button
+                              type="button"
+                              className="btn-ghost"
+                              onClick={() => startEdit(entry)}
+                            >
+                              Editar capítulo
+                            </button>
+                          </div>
+                        </>
+                      )}
+
+                      {isEditing && (
+                        <form
+                          onSubmit={(e) => handleSaveEdit(e, entry)}
+                          className="lore-edit-form"
+                        >
+                          <input
+                            type="text"
+                            value={editTitulo}
+                            onChange={(e) =>
+                              setEditTitulo(e.target.value)
+                            }
+                            className="lore-input"
+                            placeholder="Título del capítulo"
+                          />
+                          <textarea
+                            value={editTexto}
+                            onChange={(e) =>
+                              setEditTexto(e.target.value)
+                            }
+                            className="lore-textarea"
+                            placeholder="Escribe aquí el relato..."
+                            rows={4}
+                          />
+                          {editError && (
+                            <p className="muted" style={{ color: "#fca5a5" }}>
+                              {editError}
+                            </p>
+                          )}
+                          <div className="media-actions">
+                            <button
+                              type="submit"
+                              className="btn-accent"
+                              disabled={savingEdit}
+                            >
+                              {savingEdit
+                                ? "Guardando..."
+                                : "Guardar cambios"}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-ghost"
+                              onClick={cancelEdit}
+                              disabled={savingEdit}
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
         </div>
-      )}
+      </div>
 
-      {/* Estado vacío */}
-      {!hayMisiones && !hayPersonajes && (
-        <div className="empty">
-          <p>No hay datos todavía. Crea tu primera misión o personaje.</p>
-          <div className="actions">
-            <button className="btn-accent" onClick={() => setModalMisionOpen(true)}>
-              Nueva misión
-            </button>
-            <button className="btn-ghost" onClick={() => setModalPjOpen(true)}>
-              Nuevo personaje
-            </button>
-          </div>
+      {/* CREAR NUEVO (PLEGABLE) */}
+      <div className="panel">
+        <div className="panel-head">
+          <h2>Nuevo capítulo</h2>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => setCreateOpen((v) => !v)}
+          >
+            {createOpen ? "Ocultar" : "Añadir"}
+          </button>
         </div>
-      )}
 
-      {/* MODAL: Nueva Misión */}
-      {modalMisionOpen && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <div className="modal-header">
-              <h3>Nueva misión</h3>
-              <button className="btn" onClick={() => setModalMisionOpen(false)}>
-                ✖
+        {createOpen && (
+          <form onSubmit={handleCreate} className="lore-create-form">
+            <input
+              type="text"
+              value={newTitulo}
+              onChange={(e) => setNewTitulo(e.target.value)}
+              placeholder="Título del capítulo"
+              className="lore-input"
+            />
+            <textarea
+              value={newTexto}
+              onChange={(e) => setNewTexto(e.target.value)}
+              placeholder="Texto del capítulo..."
+              rows={4}
+              className="lore-textarea"
+            />
+            {createError && (
+              <p className="muted" style={{ color: "#fca5a5" }}>
+                {createError}
+              </p>
+            )}
+            <div className="media-actions">
+              <button
+                type="submit"
+                className="btn-accent"
+                disabled={creating}
+              >
+                {creating
+                  ? "Sellando capítulo..."
+                  : "Guardar capítulo"}
               </button>
             </div>
-            <div className="modal-body">
-              <label>Título</label>
-              <input value={newMision.titulo} onChange={(e) => setNewMision({ ...newMision, titulo: e.target.value })} />
-              <label>Zona</label>
-              <input value={newMision.zona} onChange={(e) => setNewMision({ ...newMision, zona: e.target.value })} />
-              <label>NPC</label>
-              <input value={newMision.npc} onChange={(e) => setNewMision({ ...newMision, npc: e.target.value })} />
-              <label>Descripción</label>
-              <textarea value={newMision.descripcion} onChange={(e) => setNewMision({ ...newMision, descripcion: e.target.value })} />
-            </div>
-            <div className="modal-actions">
-              <button className="btn" onClick={() => setModalMisionOpen(false)}>Cancelar</button>
-              <button className="btn btn-accent" onClick={crearMision}>Crear</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: Nuevo Personaje */}
-      {modalPjOpen && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <div className="modal-header">
-              <h3>Nuevo personaje</h3>
-              <button className="btn" onClick={() => setModalPjOpen(false)}>
-                ✖
-              </button>
-            </div>
-            <div className="modal-body">
-              <label>Nombre</label>
-              <input value={newPj.nombre} onChange={(e) => setNewPj({ ...newPj, nombre: e.target.value })} />
-              <label>Información</label>
-              <textarea value={newPj.informacion} onChange={(e) => setNewPj({ ...newPj, informacion: e.target.value })} />
-            </div>
-            <div className="modal-actions">
-              <button className="btn" onClick={() => setModalPjOpen(false)}>Cancelar</button>
-              <button className="btn btn-accent" onClick={crearPj}>Crear</button>
-            </div>
-          </div>
-        </div>
-      )}
+          </form>
+        )}
+      </div>
     </section>
   );
 }
