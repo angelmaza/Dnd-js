@@ -5,19 +5,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { query, execute } from "@/lib/db";
 import type { MisionRow } from "@/entidades/db";
 
-// GET /api/misiones/[id]
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const numId = Number(params.id);
+/**
+ * GET /api/misiones/[id]
+ */
+export async function GET(_req: NextRequest, { params }: any) {
+  const numId = Number(params?.id);
 
-  if (Number.isNaN(numId)) {
+  if (!numId || Number.isNaN(numId)) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
   try {
-    const rows = await query<MisionRow>(
+    const rows = await query<MisionRow[]>(
       `SELECT id_mision,
               titulo,
               zona,
@@ -46,14 +45,18 @@ export async function GET(
   }
 }
 
-// PUT /api/misiones/[id]
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const numId = Number(params.id);
+/**
+ * PUT /api/misiones/[id]
+ * Actualiza campos parciales.
+ * completada se trata como boolean:
+ * - true / 1  -> true
+ * - false / 0 -> false
+ * - ausente   -> no se toca
+ */
+export async function PUT(req: NextRequest, { params }: any) {
+  const numId = Number(params?.id);
 
-  if (Number.isNaN(numId)) {
+  if (!numId || Number.isNaN(numId)) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
@@ -65,7 +68,6 @@ export async function PUT(
     );
   }
 
-  // Normalizamos campos
   const titulo =
     typeof body.titulo === "string" ? body.titulo.trim() : null;
   const zona =
@@ -77,7 +79,9 @@ export async function PUT(
       ? body.descripcion.trim()
       : null;
   const importancia =
-    body.importancia === null || body.importancia === undefined || body.importancia === ""
+    body.importancia === null ||
+    body.importancia === undefined ||
+    body.importancia === ""
       ? null
       : Number(body.importancia);
   const recompensa =
@@ -85,7 +89,7 @@ export async function PUT(
       ? body.recompensa.trim()
       : null;
 
-  // completada -> boolean | null (si no viene, no se toca)
+  // completada: sólo cambiamos si llega algo reconocible
   let completada: boolean | null = null;
   if (typeof body.completada === "boolean") {
     completada = body.completada;
@@ -128,14 +132,13 @@ export async function PUT(
   }
 }
 
-// DELETE /api/misiones/[id]
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const numId = Number(params.id);
+/**
+ * DELETE /api/misiones/[id]
+ */
+export async function DELETE(_req: NextRequest, { params }: any) {
+  const numId = Number(params?.id);
 
-  if (Number.isNaN(numId)) {
+  if (!numId || Number.isNaN(numId)) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
