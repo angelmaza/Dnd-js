@@ -1,175 +1,506 @@
-// src/app/(sections)/quests.tsx
+// src/app/(sections)/misiones/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Mision = {
   id_mision: number;
   titulo: string;
   zona: string | null;
   npc: string | null;
-  completada: 0 | 1 | boolean;
+  descripcion: string | null;
+  importancia: number | null;
+  recompensa: string | null;
+  completada: 0 | 1;
 };
 
-
-
-export default function Page() {
-  const router = useRouter();
-
+export default function MisionesPage() {
   const [misiones, setMisiones] = useState<Mision[]>([]);
-  const [modalMisionOpen, setModalMisionOpen] = useState(false);
-  const [modalPjOpen, setModalPjOpen] = useState(false);
-  const [newMision, setNewMision] = useState({
-    titulo: "",
-    zona: "",
-    npc: "",
-    descripcion: "",
-  });
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Carga inicial (cliente) → consume los endpoints
+  // Modal ver detalle
+  const [viewing, setViewing] = useState<Mision | null>(null);
+
+  // Modal crear / editar
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Mision | null>(null);
+
+  // Form state
+  const [formTitulo, setFormTitulo] = useState("");
+  const [formZona, setFormZona] = useState("");
+  const [formNpc, setFormNpc] = useState("");
+  const [formDescripcion, setFormDescripcion] = useState("");
+  const [formImportancia, setFormImportancia] = useState<number | "">("");
+  const [formRecompensa, setFormRecompensa] = useState("");
+  const [formCompletada, setFormCompletada] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // ===== CARGAR MISIONES =====
   useEffect(() => {
-    (async () => {
-      try {
-        const r1 = await fetch("/api/misiones", { cache: "no-store" });
-        if (r1.ok) setMisiones(await r1.json());
-      } catch {}
-    })();
+    cargarMisiones();
   }, []);
 
-  const hayMisiones = misiones.length > 0;
-
-  const irAMision = (m: Mision) => router.push(`/misiones/${m.id_mision}`);
-
-  // POST: crear misión
-  const crearMision = async () => {
-    const body = {
-      titulo: newMision.titulo.trim(),
-      zona: newMision.zona.trim(),
-      npc: newMision.npc.trim(),
-      descripcion: newMision.descripcion.trim(),
-      importancia: 1,
-      recompensa: "",
-      completada: 0,
-    };
-    if (!body.titulo) return;
-
-    const res = await fetch("/api/misiones", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    if (res.ok) {
-      const creada = await res.json();
-      setMisiones((prev) => [
-        ...prev,
-        {
-          id_mision: creada.id,
-          titulo: body.titulo,
-          zona: body.zona,
-          npc: body.npc,
-          completada: 0,
-        },
-      ]);
-      setModalMisionOpen(false);
-      setNewMision({ titulo: "", zona: "", npc: "", descripcion: "" });
+  async function cargarMisiones() {
+    setIsLoading(true);
+    setFormError(null);
+    try {
+      const r = await fetch("/api/misiones", { cache: "no-store" });
+      if (!r.ok) throw new Error("No se pudo cargar misiones");
+      const data: Mision[] = await r.json();
+      setMisiones(data);
+    } catch (err) {
+      console.error(err);
+      setFormError("No se pudieron cargar las misiones.");
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }
 
+  const hayMisiones = misiones.length > 0;
+  const pendientes = misiones.filter((m) => m.completada === 0);
+  const completadas = misiones.filter((m) => m.completada === 1);
 
+  // ===== VER DETALLE (MODAL) =====
+  function abrirVer(m: Mision) {
+    setViewing(m);
+  }
+
+  function cerrarVer() {
+    setViewing(null);
+  }
+
+  // ===== CREAR / EDITAR (MODAL) =====
+  function abrirCrear() {
+    setEditing(null);
+    setFormTitulo("");
+    setFormZona("");
+    setFormNpc("");
+    setFormDescripcion("");
+    setFormImportancia("");
+    setFormRecompensa("");
+    setFormCompletada(false);
+    setFormError(null);
+    setIsFormOpen(true);
+  }
+
+  function abrirEditar(m: Mision) {
+    setEditing(m);
+    setFormTitulo(m.titulo);
+    setFormZona(m.zona ?? "");
+    setFormNpc(m.npc ?? "");
+    setFormDescripcion(m.descripcion ?? "");
+    setFormImportancia(m.importancia ?? "");
+    setFormRecompensa(m.recompensa ?? "");
+    setFormCompletada(m.completada === 1);
+    setFormError(null);
+    setIsFormOpen(true);
+  }
+
+  function cerrarForm() {
+    setIsFormOpen(false);
+    setEditing(null);
+  }
+
+  // ===== GUARDAR (CREAR / EDITAR) =====
+  async function guardarMision() {
+    setFormError(null);
+
+    const titulo = formTitulo.trim();
+    if (!titulo) {
+      setFormError("El título es obligatorio.");
+      return;
+    }
+
+    const completadaValue: 0 | 1 = formCompletada ? 1 : 0;
+
+    const payload = {
+      titulo,
+      zona: formZona.trim() || null,
+      npc: formNpc.trim() || null,
+      descripcion: formDescripcion.trim() || null,
+      importancia:
+        formImportancia === "" ? null : Number(formImportancia),
+      recompensa: formRecompensa.trim() || null,
+      completada: completadaValue,
+    };
+
+    try {
+      setSaving(true);
+
+      if (editing) {
+        // PUT /api/misiones/[id]
+        const res = await fetch(`/api/misiones/${editing.id_mision}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Error al actualizar misión.");
+        }
+
+        // Actualizar en estado
+        setMisiones((prev) =>
+          prev.map((m) =>
+            m.id_mision === editing.id_mision ? { ...m, ...payload } : m
+          )
+        );
+
+        // Si estaba abierta en el modal de ver, actualizar también
+        if (viewing && viewing.id_mision === editing.id_mision) {
+          setViewing((prev) => (prev ? { ...prev, ...payload } : prev));
+        }
+      } else {
+        // POST /api/misiones → { id }
+        const res = await fetch("/api/misiones", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Error al crear misión.");
+        }
+
+        const data = await res.json(); // { id }
+
+        const nueva: Mision = {
+          id_mision: data.id,
+          titulo: payload.titulo,
+          zona: payload.zona,
+          npc: payload.npc,
+          descripcion: payload.descripcion,
+          importancia: payload.importancia,
+          recompensa: payload.recompensa,
+          completada: completadaValue,
+        };
+
+        setMisiones((prev) => [...prev, nueva]);
+      }
+
+      setIsFormOpen(false);
+      setEditing(null);
+    } catch (err) {
+      console.error(err);
+      setFormError(
+        editing
+          ? "No se pudo guardar la misión."
+          : "No se pudo crear la misión."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // ===== ELIMINAR =====
+  async function eliminarMision(m: Mision) {
+    if (!confirm(`¿Eliminar misión "${m.titulo}"?`)) return;
+
+    try {
+      const res = await fetch(`/api/misiones/${m.id_mision}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Error al eliminar misión.");
+      }
+
+      setMisiones((prev) =>
+        prev.filter((x) => x.id_mision !== m.id_mision)
+      );
+
+      if (viewing?.id_mision === m.id_mision) {
+        setViewing(null);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("No se pudo eliminar la misión.");
+    }
+  }
+
+  // ===== RENDER =====
   return (
-    <section>
-      <h1>Bienvenido a Barovia</h1>
-      <p>
-        Entre nieblas y colmillos, tu diario de campaña cobra vida. Revisa misiones, gestiona personajes y registra nuevas hazañas.
-      </p>
+    <section className="detail-wrap">
+      {/* PANEL: MISIONES PENDIENTES */}
+      <div className="panel">
+        <div className="panel-head">
+          <h2>Misiones pendientes</h2>
+          <button className="btn-accent" onClick={abrirCrear}>
+            Nueva misión
+          </button>
+        </div>
 
-      {/* MISIONES */}
+        <div className="table-wrap misiones-wrap">
+          {isLoading ? (
+            <div className="empty">
+              <p>Cargando encargos de Barovia…</p>
+            </div>
+          ) : !hayMisiones || pendientes.length === 0 ? (
+            <div className="empty">
+              <p>No hay misiones en curso.</p>
+              <div className="actions">
+                <button className="btn-accent" onClick={abrirCrear}>
+                  Registrar nueva misión
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="misiones-grid">
+              {pendientes.map((m) => (
+                <div
+                  key={m.id_mision}
+                  className="mission-card"
+                  onClick={() => abrirVer(m)}
+                >
+                  <div className="mission-card-head">
+                    <div className="mission-card-titles">
+                      <div className="mission-card-title">
+                        {m.titulo}
+                      </div>
+                      <div className="mission-card-sub">
+                        {m.zona || "Zona desconocida"} ·{" "}
+                        {m.npc || "Sin contacto"}
+                      </div>
+                    </div>
+                    <div className="mission-card-tags">
+                      <span>⏳ En curso</span>
+                      {m.importancia != null && (
+                        <span>Importancia: {m.importancia}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {formError && !isLoading && (
+          <div className="empty">
+            <p className="error-text">{formError}</p>
+          </div>
+        )}
+      </div>
+
+      {/* PANEL: MISIONES COMPLETADAS (solo si hay misiones en general) */}
       {hayMisiones && (
         <div className="panel">
           <div className="panel-head">
-            <h2>Misiones</h2>
-            <button className="btn-accent" onClick={() => setModalMisionOpen(true)}>
-              Nueva misión
-            </button>
+            <h2>Misiones completadas</h2>
+            <span className="muted">
+              {completadas.length} completada
+              {completadas.length !== 1 && "s"}
+            </span>
           </div>
-          <div className="table-wrap">
-            <table className="table-medieval">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Zona</th>
-                  <th>Npc</th>
-                  <th>Completada</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {misiones.map((m) => (
-                  <tr key={m.id_mision}>
-                    <td>{m.titulo}</td>
-                    <td>{m.zona ?? "-"}</td>
-                    <td>{m.npc ?? "-"}</td>
-                    <td>{(m.completada ? 1 : 0) === 1 ? "Sí" : "No"}</td>
-                    <td>
-                      <button className="btn-ghost" onClick={() => irAMision(m)}>
-                        Ver
-                      </button>
-                    </td>
-                  </tr>
+
+          <div className="table-wrap misiones-wrap">
+            {isLoading ? (
+              <div className="empty">
+                <p>Cargando…</p>
+              </div>
+            ) : completadas.length === 0 ? (
+              <div className="empty">
+                <p>
+                  Ningún héroe ha cerrado todavía estos capítulos.
+                </p>
+              </div>
+            ) : (
+              <div className="misiones-grid">
+                {completadas.map((m) => (
+                  <div
+                    key={m.id_mision}
+                    className="mission-card completed"
+                    onClick={() => abrirVer(m)}
+                  >
+                    <div className="mission-card-head">
+                      <div className="mission-card-titles">
+                        <div className="mission-card-title">
+                          {m.titulo}
+                        </div>
+                        <div className="mission-card-sub">
+                          {m.zona || "Zona desconocida"} ·{" "}
+                          {m.npc || "Sin contacto"}
+                        </div>
+                      </div>
+                      <div className="mission-card-tags">
+                        <span>✔ Completada</span>
+                        {m.importancia != null && (
+                          <span>Importancia: {m.importancia}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-
-      {/* Estado vacío */}
-      {!hayMisiones  && (
-        <div className="empty">
-          <p>No hay datos todavía. Crea tu primera misión o personaje.</p>
-          <div className="actions">
-            <button className="btn-accent" onClick={() => setModalMisionOpen(true)}>
-              Nueva misión
-            </button>
-            <button className="btn-ghost" onClick={() => setModalPjOpen(true)}>
-              Nuevo personaje
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: Nueva Misión */}
-      {modalMisionOpen && (
+      {/* MODAL: Ver detalle */}
+      {viewing && (
         <div className="modal-overlay">
           <div className="modal-card">
-            <div className="modal-header">
-              <h3>Nueva misión</h3>
-              <button className="btn" onClick={() => setModalMisionOpen(false)}>
+            <div className="modal-head">
+              <h3>{viewing.titulo}</h3>
+              <button className="btn-ghost" onClick={cerrarVer}>
+                ✖
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="muted">
+                {viewing.completada === 1
+                  ? "✔ Misión completada."
+                  : "⏳ Misión en curso."}
+              </p>
+              <p>
+                <b>Zona:</b> {viewing.zona || "—"}
+              </p>
+              <p>
+                <b>NPC:</b> {viewing.npc || "—"}
+              </p>
+              <p>
+                <b>Importancia:</b>{" "}
+                {viewing.importancia ?? "—"}
+              </p>
+              <p>
+                <b>Recompensa:</b>{" "}
+                {viewing.recompensa || "—"}
+              </p>
+              <p className="mission-desc">
+                <b>Descripción:</b>
+                <br />
+                {viewing.descripcion || "Sin detalles."}
+              </p>
+            </div>
+            <div className="modal-actions">
+              <button
+                className="btn-ghost"
+                onClick={() => {
+                  cerrarVer();
+                  abrirEditar(viewing);
+                }}
+              >
+                Editar
+              </button>
+              <button
+                className="btn-ghost"
+                onClick={() => eliminarMision(viewing)}
+              >
+                Eliminar
+              </button>
+              <button className="btn" onClick={cerrarVer}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Crear / Editar */}
+      {isFormOpen && (
+        <div className="modal-overlay">
+          <div className="modal-card">
+            <div className="modal-head">
+              <h3>{editing ? "Editar misión" : "Nueva misión"}</h3>
+              <button className="btn-ghost" onClick={cerrarForm}>
                 ✖
               </button>
             </div>
             <div className="modal-body">
               <label>Título</label>
-              <input value={newMision.titulo} onChange={(e) => setNewMision({ ...newMision, titulo: e.target.value })} />
+              <input
+                value={formTitulo}
+                onChange={(e) => setFormTitulo(e.target.value)}
+              />
+
               <label>Zona</label>
-              <input value={newMision.zona} onChange={(e) => setNewMision({ ...newMision, zona: e.target.value })} />
+              <input
+                value={formZona}
+                onChange={(e) => setFormZona(e.target.value)}
+              />
+
               <label>NPC</label>
-              <input value={newMision.npc} onChange={(e) => setNewMision({ ...newMision, npc: e.target.value })} />
+              <input
+                value={formNpc}
+                onChange={(e) => setFormNpc(e.target.value)}
+              />
+
               <label>Descripción</label>
-              <textarea value={newMision.descripcion} onChange={(e) => setNewMision({ ...newMision, descripcion: e.target.value })} />
+              <textarea
+                value={formDescripcion}
+                onChange={(e) =>
+                  setFormDescripcion(e.target.value)
+                }
+              />
+
+              <label>Importancia</label>
+              <input
+                type="number"
+                min={0}
+                max={10}
+                value={formImportancia}
+                onChange={(e) =>
+                  setFormImportancia(
+                    e.target.value === ""
+                      ? ""
+                      : Number(e.target.value)
+                  )
+                }
+              />
+
+              <label>Recompensa</label>
+              <input
+                value={formRecompensa}
+                onChange={(e) =>
+                  setFormRecompensa(e.target.value)
+                }
+              />
+
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={formCompletada}
+                  onChange={(e) =>
+                    setFormCompletada(e.target.checked)
+                  }
+                />
+                Marcar como completada
+              </label>
+
+              {formError && (
+                <p className="error-text">
+                  {formError}
+                </p>
+              )}
             </div>
             <div className="modal-actions">
-              <button className="btn" onClick={() => setModalMisionOpen(false)}>Cancelar</button>
-              <button className="btn btn-accent" onClick={crearMision}>Crear</button>
+              <button
+                className="btn-ghost"
+                onClick={cerrarForm}
+                disabled={saving}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn-accent"
+                onClick={guardarMision}
+                disabled={saving}
+              >
+                {saving
+                  ? "Guardando..."
+                  : editing
+                  ? "Guardar cambios"
+                  : "Crear misión"}
+              </button>
             </div>
           </div>
         </div>
       )}
-
-
     </section>
   );
 }

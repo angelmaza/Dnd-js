@@ -8,22 +8,23 @@ import type { MisionRow } from "@/entidades/db";
 // GET /api/misiones/[id]
 export async function GET(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await params;
-  const numId = Number(id);
+  const numId = Number(params.id);
 
   if (Number.isNaN(numId)) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
-  const rows = await query<MisionRow[]>(
+  const rows = await query<MisionRow>(
     `SELECT id_mision, titulo, zona, npc, descripcion, importancia, recompensa, completada
-     FROM Misiones WHERE id_mision = ? LIMIT 1`,
+       FROM "Misiones"
+      WHERE id_mision = $1
+      LIMIT 1`,
     [numId]
   );
 
-  if (rows.length === 0) {
+  if (!rows || rows.length === 0) {
     return NextResponse.json({ error: "No encontrada" }, { status: 404 });
   }
 
@@ -33,38 +34,50 @@ export async function GET(
 // PUT /api/misiones/[id]
 export async function PUT(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await params;
-  const numId = Number(id);
+  const numId = Number(params.id);
 
   if (Number.isNaN(numId)) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
+
+  if (!body || typeof body !== "object") {
+    return NextResponse.json(
+      { error: "Cuerpo inválido" },
+      { status: 400 }
+    );
+  }
+
   const fields = {
     titulo: body.titulo ?? null,
     zona: body.zona ?? null,
     npc: body.npc ?? null,
     descripcion: body.descripcion ?? null,
-    importancia: body.importancia ?? null,
+    importancia:
+      body.importancia === null || body.importancia === undefined
+        ? null
+        : Number(body.importancia),
     recompensa: body.recompensa ?? null,
-    completada: body.completada ? 1 : 0,
+    completada:
+      body.completada === 1 || body.completada === true ? 1 :
+      body.completada === 0 || body.completada === false ? 0 :
+      null,
   };
 
   try {
     await execute(
-      `UPDATE Misiones
-       SET
-         titulo = COALESCE(?, titulo),
-         zona = COALESCE(?, zona),
-         npc = COALESCE(?, npc),
-         descripcion = COALESCE(?, descripcion),
-         importancia = COALESCE(?, importancia),
-         recompensa = COALESCE(?, recompensa),
-         completada = COALESCE(?, completada)
-       WHERE id_mision = ?`,
+      `UPDATE "Misiones"
+          SET titulo      = COALESCE($1, titulo),
+              zona        = COALESCE($2, zona),
+              npc         = COALESCE($3, npc),
+              descripcion = COALESCE($4, descripcion),
+              importancia = COALESCE($5, importancia),
+              recompensa  = COALESCE($6, recompensa),
+              completada  = COALESCE($7, completada)
+        WHERE id_mision   = $8`,
       [
         fields.titulo,
         fields.zona,
@@ -90,10 +103,9 @@ export async function PUT(
 // DELETE /api/misiones/[id]
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await params;
-  const numId = Number(id);
+  const numId = Number(params.id);
 
   if (Number.isNaN(numId)) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
@@ -101,7 +113,7 @@ export async function DELETE(
 
   try {
     await execute(
-      `DELETE FROM Misiones WHERE id_mision = ?`,
+      `DELETE FROM "Misiones" WHERE id_mision = $1`,
       [numId]
     );
 
