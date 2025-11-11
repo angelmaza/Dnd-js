@@ -7,7 +7,7 @@ export interface ElementoRow {
   color?: string | null;
 }
 
-export interface VAlchemyProporcioneRow {
+export interface VAlchemyProporcionesRow {
   // vista V_ALCHEMY_PROPORCIONES (ajusta a tus columnas reales)
   Id: number;                     // id_producto
   NombreProducto: string | null;

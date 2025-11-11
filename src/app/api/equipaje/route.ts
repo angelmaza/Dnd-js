@@ -8,20 +8,53 @@ import type { VEquipajePersonajesRow } from "@/entidades/db";
 
 /* ========== GET: listar equipaje (vista) ========== */
 export async function GET() {
-  const filas = await query<VEquipajePersonajesRow>(
-    `SELECT id_pj,
-            "IdItemOPocion",
-            "Personaje",
-            "Nombre",
-            "info_item",
-            "Toxicidad",
-            "Cantidad",
-            "Tipo"
-       FROM "V_Equipaje_Personajes"
-      ORDER BY "Personaje", "Nombre"`
-  );
+  try {
+    const filas = await query<VEquipajePersonajesRow>(
+      `
+      SELECT
+        p.id_pj                         AS "id_pj",
+        i.id_item                       AS "IdItemOPocion",
+        p.nombre                        AS "Personaje",
+        i.nombre                        AS "Nombre",
+        i.info_item                     AS "info_item",
+        NULL::integer                   AS "Toxicidad",
+        iportador.cantidad              AS "Cantidad",
+        'Item'                          AS "Tipo"
+      FROM "Inventario_Y_Portador" iportador
+      JOIN "Personajes" p
+        ON iportador.id_personaje = p.id_pj
+      JOIN "Inventario" i
+        ON iportador.id_item = i.id_item
 
-  return NextResponse.json(filas);
+      UNION ALL
+
+      SELECT
+        p.id_pj                         AS "id_pj",
+        produc.id_producto              AS "IdItemOPocion",
+        p.nombre                        AS "Personaje",
+        produc.nombre                   AS "Nombre",
+        produc.descripcion              AS "info_item",
+        produc.toxicidad                AS "Toxicidad",
+        pportador.cantidad              AS "Cantidad",
+        'Pocion'                        AS "Tipo"
+      FROM "Pocion_Y_Portador" pportador
+      JOIN "Personajes" p
+        ON pportador.id_personaje = p.id_pj
+      JOIN "Productos" produc
+        ON produc.id_producto = pportador.id_item
+
+      ORDER BY "Personaje", "Tipo" DESC, "Nombre"
+      `
+    );
+
+    return NextResponse.json(filas);
+  } catch (err) {
+    console.error("Error /api/equipaje:", err);
+    return NextResponse.json(
+      { error: "Error obteniendo equipaje" },
+      { status: 500 }
+    );
+  }
 }
 
 /* ========== POST: añadir objeto (Item o Poción) ========== */
