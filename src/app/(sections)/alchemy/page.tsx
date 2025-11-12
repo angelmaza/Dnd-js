@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { VAlchemyProporcioneRow } from "@/entidades/alchemy";
+import type { VAlchemyProporcionesRow } from "@/entidades/alchemy";
 
 /* ===== tipos locales (ligeros) ===== */
 type Personaje = { id_pj: number; nombre: string };
@@ -25,7 +25,7 @@ export default function AlchemyPage() {
   const [idCrafter, setIdCrafter] = useState<number>(1);
 
   const [elementos, setElementos] = useState<Elemento[]>([]);
-  const [recetasRaw, setRecetasRaw] = useState<VAlchemyProporcioneRow[]>([]);
+  const [recetasRaw, setRecetasRaw] = useState<VAlchemyProporcionesRow[]>([]);
   const [recetas, setRecetas] = useState<RecetaView[]>([]);
 
   const [mats, setMats] = useState<MaterialMap[]>([]);
