@@ -10,7 +10,6 @@ import type { VAlchemyProporcionesRow } from "@/entidades/alchemy";
  * - Si no existe la vista, hace fallback a SELECT inline con JOINs.
  */
 export async function GET() {
-  const isDev = process.env.NODE_ENV !== "production";
 
   // 1) Intento: vista con comillas y mayúsculas
   try {
@@ -28,11 +27,11 @@ export async function GET() {
       `
     );
     const res = NextResponse.json(rows);
-    if (isDev) res.headers.set("x-alchemy-source", 'view "V_ALCHEMY_PROPORCIONES"');
+    res.headers.set("x-alchemy-source", 'view "V_ALCHEMY_PROPORCIONES"');
     return res;
   } catch (err: any) {
     // 42P01: undefined_table / undefined view
-    if (isDev) console.error('VISTA "V_ALCHEMY_PROPORCIONES" (quoted) falló:', err?.message || err);
+    console.error('VISTA "V_ALCHEMY_PROPORCIONES" (quoted) falló:', err?.message || err);
   }
 
   // 2) Intento: vista en minúsculas sin comillas
@@ -51,10 +50,10 @@ export async function GET() {
       `
     );
     const res = NextResponse.json(rows);
-    if (isDev) res.headers.set("x-alchemy-source", "view v_alchemy_proporciones");
+    res.headers.set("x-alchemy-source", "view v_alchemy_proporciones");
     return res;
   } catch (err: any) {
-    if (isDev) console.error("vista v_alchemy_proporciones (lower) falló:", err?.message || err);
+    console.error("vista v_alchemy_proporciones (lower) falló:", err?.message || err);
   }
 
   // 3) Fallback: consulta inline (JOINs) — no depende de la vista
@@ -75,7 +74,7 @@ export async function GET() {
       `
     );
     const res = NextResponse.json(rows);
-    if (isDev) res.headers.set("x-alchemy-source", "inline-join-fallback");
+    res.headers.set("x-alchemy-source", "inline-join-fallback");
     return res;
   } catch (err: any) {
     console.error("Fallback inline JOIN también falló:", err);
