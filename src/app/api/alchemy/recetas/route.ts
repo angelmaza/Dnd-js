@@ -34,53 +34,53 @@ export async function GET() {
     console.error('VISTA "V_ALCHEMY_PROPORCIONES" (quoted) falló:', err?.message || err);
   }
 
-  // 2) Intento: vista en minúsculas sin comillas
-  try {
-    const rows = await query<VAlchemyProporcionesRow>(
-      `
-      SELECT
-        "Id",
-        "NombreProducto",
-        "NombreElemento",
-        "ProporcionElemento",
-        "Toxicidad",
-        "Descripcion"
-      FROM public.v_alchemy_proporciones
-      ORDER BY "NombreProducto" ASC, "ProporcionElemento" DESC
-      `
-    );
-    const res = NextResponse.json(rows);
-    res.headers.set("x-alchemy-source", "view v_alchemy_proporciones");
-    return res;
-  } catch (err: any) {
-    console.error("vista v_alchemy_proporciones (lower) falló:", err?.message || err);
-  }
+  // // 2) Intento: vista en minúsculas sin comillas
+  // try {
+  //   const rows = await query<VAlchemyProporcionesRow>(
+  //     `
+  //     SELECT
+  //       "Id",
+  //       "NombreProducto",
+  //       "NombreElemento",
+  //       "ProporcionElemento",
+  //       "Toxicidad",
+  //       "Descripcion"
+  //     FROM public.v_alchemy_proporciones
+  //     ORDER BY "NombreProducto" ASC, "ProporcionElemento" DESC
+  //     `
+  //   );
+  //   const res = NextResponse.json(rows);
+  //   res.headers.set("x-alchemy-source", "view v_alchemy_proporciones");
+  //   return res;
+  // } catch (err: any) {
+  //   console.error("vista v_alchemy_proporciones (lower) falló:", err?.message || err);
+  // }
 
   // 3) Fallback: consulta inline (JOINs) — no depende de la vista
-  try {
-    const rows = await query<VAlchemyProporcionesRow>(
-      `
-      SELECT 
-        p.id_producto                   AS "Id",
-        p.nombre                        AS "NombreProducto",
-        e.nombre                        AS "NombreElemento",
-        r.proporcion                    AS "ProporcionElemento",
-        p.toxicidad                     AS "Toxicidad",
-        p.descripcion                   AS "Descripcion"
-      FROM public."Productos" p
-      JOIN public."Recetas_producto_elemento" r ON p.id_producto = r.id_producto
-      JOIN public."Elementos" e                 ON r.id_elemento = e.id_elemento
-      ORDER BY "NombreProducto" ASC, "ProporcionElemento" DESC
-      `
-    );
-    const res = NextResponse.json(rows);
-    res.headers.set("x-alchemy-source", "inline-join-fallback");
-    return res;
-  } catch (err: any) {
-    console.error("Fallback inline JOIN también falló:", err);
-    return NextResponse.json(
-      { error: "Error obteniendo recetas de alquimia" },
-      { status: 500 }
-    );
-  }
+  // try {
+  //   const rows = await query<VAlchemyProporcionesRow>(
+  //     `
+  //     SELECT 
+  //       p.id_producto                   AS "Id",
+  //       p.nombre                        AS "NombreProducto",
+  //       e.nombre                        AS "NombreElemento",
+  //       r.proporcion                    AS "ProporcionElemento",
+  //       p.toxicidad                     AS "Toxicidad",
+  //       p.descripcion                   AS "Descripcion"
+  //     FROM public."Productos" p
+  //     JOIN public."Recetas_producto_elemento" r ON p.id_producto = r.id_producto
+  //     JOIN public."Elementos" e                 ON r.id_elemento = e.id_elemento
+  //     ORDER BY "NombreProducto" ASC, "ProporcionElemento" DESC
+  //     `
+  //   );
+  //   const res = NextResponse.json(rows);
+  //   res.headers.set("x-alchemy-source", "inline-join-fallback");
+  //   return res;
+  // } catch (err: any) {
+  //   console.error("Fallback inline JOIN también falló:", err);
+  //   return NextResponse.json(
+  //     { error: "Error obteniendo recetas de alquimia" },
+  //     { status: 500 }
+  //   );
+  // }
 }

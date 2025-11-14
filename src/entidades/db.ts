@@ -54,6 +54,7 @@ export interface NpcRow {
   imagen_fondo: string | null;
   informacion: string | null;   // LONGTEXT
   clasificacion: string | null;
+  rango: number | null;
 }
 
 /** Tabla: Misiones */
