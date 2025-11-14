@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import ImageUploader from "@/components/ImageUploader";
 
 type Npc = {
   id_npc: number;
@@ -13,7 +14,21 @@ type Npc = {
   rango: number | null;
 };
 
-const DEFAULT_BG = "/images/Bosque.jpg"; // fondo por defecto
+const DEFAULT_BG = "/images/Bosque.jpg";
+
+/** Resuelve rutas de imagen:
+ * - http(s):// o data: -> usar tal cual (Blob u otra URL pública)
+ * - /algo -> ruta absoluta de la app
+ * - nombre.png -> asume /tokens/nombre.png (carpeta local)
+ */
+function resolveImg(v?: string | null) {
+  if (!v) return null;
+  const s = v.trim();
+  if (!s) return null;
+  if (s.startsWith("http://") || s.startsWith("https://") || s.startsWith("data:")) return s;
+  if (s.startsWith("/")) return s;
+  return `/tokens/${s}`;
+}
 
 export default function NpcsPage() {
   const [npcs, setNpcs] = useState<Npc[]>([]);
@@ -39,9 +54,12 @@ export default function NpcsPage() {
 
   async function cargarNpcs() {
     setIsLoading(true);
-    const r = await fetch("/api/npcs", { cache: "no-store" });
-    if (r.ok) setNpcs(await r.json());
-    setIsLoading(false);
+    try {
+      const r = await fetch("/api/npcs", { cache: "no-store" });
+      if (r.ok) setNpcs(await r.json());
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function abrirCrear() {
@@ -74,9 +92,10 @@ export default function NpcsPage() {
 
     const rango =
       formRango === "" ? null : Math.max(0, Number.isFinite(formRango as number) ? Number(formRango) : 0);
+      console.log("[Guardar NPC] imagen:", formImagen);
 
     if (editing) {
-      // EDITAR: NO tocamos imagen_fondo aquí (queda como está en BD)
+      // EDITAR: no tocamos imagen_fondo (se mantiene la de BD)
       const payload = {
         id_npc: editing.id_npc,
         nombre,
@@ -91,7 +110,7 @@ export default function NpcsPage() {
         body: JSON.stringify(payload),
       });
     } else {
-      // CREAR: fijamos imagen_fondo automáticamente a Bosque.jpg
+      // CREAR: imagen_fondo por defecto Bosque.jpg
       const payload = {
         nombre,
         informacion: formInformacion.trim() || null,
@@ -149,59 +168,62 @@ export default function NpcsPage() {
     [npcs]
   );
 
-  const renderCard = (n: Npc) => (
-    <div
-      key={n.id_npc}
-      className="panel"
-      style={{ margin: 0 }}
-      onClick={() => setViewing(n)}
-    >
-      <div className="panel-head" style={{ justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: ".6rem" }}>
-          <div
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: "50%",
-              overflow: "hidden",
-              border: "1px solid #3a2d43",
-              background: "#1c1721",
-              display: "grid",
-              placeItems: "center",
-              fontSize: 18,
-            }}
-          >
-            {n.imagen ? (
-              <img
-                alt={n.nombre ?? ""}
-                src={n.imagen.startsWith("/") ? n.imagen : `/tokens/${n.imagen}`}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-            ) : (
-              "🧛"
-            )}
-          </div>
-          <div>
-            <div style={{ fontWeight: 700 }}>{n.nombre ?? "Sin nombre"}</div>
-            <div className="muted" style={{ fontSize: 12 }}>
-              {n.clasificacion ?? ""}
+  const renderCard = (n: Npc) => {
+    const src = resolveImg(n.imagen);
+    return (
+      <div
+        key={n.id_npc}
+        className="panel"
+        style={{ margin: 0 }}
+        onClick={() => setViewing(n)}
+      >
+        <div className="panel-head" style={{ justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: ".6rem" }}>
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: "50%",
+                overflow: "hidden",
+                border: "1px solid #3a2d43",
+                background: "#1c1721",
+                display: "grid",
+                placeItems: "center",
+                fontSize: 18,
+              }}
+            >
+              {src ? (
+                <img
+                  alt={n.nombre ?? ""}
+                  src={src}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                "🧛"
+              )}
+            </div>
+            <div>
+              <div style={{ fontWeight: 700 }}>{n.nombre ?? "Sin nombre"}</div>
+              <div className="muted" style={{ fontSize: 12 }}>
+                {n.clasificacion ?? ""}
+              </div>
             </div>
           </div>
+          <div className="muted" style={{ fontSize: 12 }}>Rango: {n.rango ?? "—"}</div>
         </div>
-        <div className="muted" style={{ fontSize: 12 }}>Rango: {n.rango ?? "—"}</div>
-      </div>
 
-      <div style={{ padding: "0.8rem 1rem 1rem" }}>
-        <p className="muted" style={{ margin: 0 }}>
-          {n.informacion
-            ? n.informacion.length > 120
-              ? n.informacion.slice(0, 120) + "…"
-              : n.informacion
-            : ""}
-        </p>
+        <div style={{ padding: "0.8rem 1rem 1rem" }}>
+          <p className="muted" style={{ margin: 0 }}>
+            {n.informacion
+              ? n.informacion.length > 120
+                ? n.informacion.slice(0, 120) + "…"
+                : n.informacion
+              : ""}
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderGrupoRango = (r: number) => {
     const grupo = npcs
@@ -272,10 +294,10 @@ export default function NpcsPage() {
                     overflow: "hidden", border: "1px solid #3a2d43", background: "#1c1721",
                   }}
                 >
-                  {viewing.imagen ? (
+                  {resolveImg(viewing.imagen) ? (
                     <img
                       alt={viewing.nombre ?? ""}
-                      src={viewing.imagen.startsWith("/") ? viewing.imagen : `/tokens/${viewing.imagen}`}
+                      src={resolveImg(viewing.imagen)!}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
                   ) : (
@@ -297,7 +319,7 @@ export default function NpcsPage() {
         </div>
       )}
 
-      {/* MODAL: Crear / Editar (sin campo de imagen de fondo) */}
+      {/* MODAL: Crear / Editar */}
       {isFormOpen && (
         <div className="modal-overlay">
           <div className="modal-card">
@@ -327,14 +349,11 @@ export default function NpcsPage() {
                 }}
               />
 
-              <label>Imagen (token)</label>
-              <input
-                placeholder="/tokens/strigoi.png o strigoi.png"
-                value={formImagen}
-                onChange={(e) => setFormImagen(e.target.value)}
+              {/* Subida de imagen: guarda URL pública (Blob o similar) en `formImagen` */}
+              <ImageUploader
+                label="Imagen (token/NPC)"
+                onUploaded={(url) => setFormImagen(url)}
               />
-
-              {/* Eliminado el campo de 'Imagen de fondo' */}
             </div>
             <div className="modal-actions">
               <button className="btn-ghost" onClick={cerrarForm}>Cancelar</button>
