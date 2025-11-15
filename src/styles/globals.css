@@ -575,3 +575,90 @@ body{
 .error-text {
   color: #fca5a5;
 }
+
+
+
+/* === Modales comunes === */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 60;
+}
+
+.modal-card {
+  width: min(720px, 94vw);
+  background: linear-gradient(180deg, #15111a, #120e16);
+  border: 1px solid #2c2233;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  color: var(--ink);
+}
+
+/* Cabeceras de modal (a veces usas modal-header y otras modal-head) */
+.modal-header,
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid #2c2233;
+}
+
+.modal-body {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem;
+}
+
+.modal-body input,
+.modal-body textarea {
+  background: #1c1721;
+  border: 1px solid #2c2233;
+  border-radius: 10px;
+  color: var(--ink);
+  padding: 0.55rem 0.7rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  padding: 0 1rem 1rem;
+}
+
+/* A veces usas .modal-actions.right para forzar a la derecha */
+.modal-actions.right {
+  justify-content: flex-end;
+}
+
+/* === Avatar grande (detalle modal) === */
+.avatar-lg {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid #3a2d43;
+  background: #1c1721;
+  display: grid;
+  place-items: center;
+}
+
+.avatar-lg img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block;
+}
+
+.avatar-emoji {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  font-size: 56px;
+}
+
+
+

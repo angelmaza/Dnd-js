@@ -5,14 +5,12 @@ import { NextResponse } from "next/server";
 import { query, execute } from "@/lib/db";
 import type { PersonajeRow } from "@/entidades/db";
 
-// GET /api/personajes/:id  -> detalle personaje
+// GET /api/personajes/:id
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }   // ← NO Promise
 ) {
-  const { id } = await params;
-  const numId = Number(id);
-
+  const numId = Number(params.id);
   if (!Number.isFinite(numId)) {
     return NextResponse.json({ error: "id inválido" }, { status: 400 });
   }
@@ -28,18 +26,15 @@ export async function GET(
   if (rows.length === 0) {
     return NextResponse.json({ error: "No encontrado" }, { status: 404 });
   }
-
   return NextResponse.json(rows[0]);
 }
 
-// PUT /api/personajes/:id  -> actualización parcial (COALESCE en SQL)
+// PUT /api/personajes/:id
 export async function PUT(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }   // ← NO Promise
 ) {
-  const { id } = await params;
-  const numId = Number(id);
-
+  const numId = Number(params.id);
   if (!Number.isFinite(numId)) {
     return NextResponse.json({ error: "id inválido" }, { status: 400 });
   }
@@ -48,24 +43,20 @@ export async function PUT(
     nombre?: string;
     informacion?: string | null;
     imagen?: string | null;
-    imagen_fondo?: string | null;
+    imagen_fondo?: string | null; // no la tocaremos si no viene
   } | null;
 
   if (!body) {
-    return NextResponse.json(
-      { error: "Body inválido" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Body inválido" }, { status: 400 });
   }
 
-  const nombre =
-    typeof body.nombre === "string" ? body.nombre.trim() : undefined;
-  const informacion =
-    body.informacion === undefined ? undefined : body.informacion ?? null;
-  const imagen =
-    body.imagen === undefined ? undefined : body.imagen ?? null;
-  const imagen_fondo =
-    body.imagen_fondo === undefined ? undefined : body.imagen_fondo ?? null;
+  // Si un campo viene como undefined => no modificar.
+  // Si viene como null => poner a NULL en BD.
+  // Si viene string "" => se guardará "" (vacío).
+  const nombre = typeof body.nombre === "string" ? body.nombre.trim() : undefined;
+  const informacion = body.informacion === undefined ? undefined : body.informacion ?? null;
+  const imagen = body.imagen === undefined ? undefined : body.imagen ?? null;
+  const imagen_fondo = body.imagen_fondo === undefined ? undefined : body.imagen_fondo ?? null;
 
   try {
     const res = await execute(
@@ -87,25 +78,19 @@ export async function PUT(
     if (res.rowCount === 0) {
       return NextResponse.json({ error: "No encontrado" }, { status: 404 });
     }
-
     return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error("Error actualizando personaje:", err);
-    return NextResponse.json(
-      { error: "Error actualizando personaje" },
-      { status: 500 }
-    );
+  } catch (err: any) {
+    console.error("Error actualizando personaje:", err?.stack || err?.message || err);
+    return NextResponse.json({ error: "Error actualizando personaje" }, { status: 500 });
   }
 }
 
 // DELETE /api/personajes/:id
 export async function DELETE(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }   // ← NO Promise
 ) {
-  const { id } = await params;
-  const numId = Number(id);
-
+  const numId = Number(params.id);
   if (!Number.isFinite(numId)) {
     return NextResponse.json({ error: "id inválido" }, { status: 400 });
   }
@@ -118,6 +103,5 @@ export async function DELETE(
   if (result.rowCount === 0) {
     return NextResponse.json({ error: "No encontrado" }, { status: 404 });
   }
-
   return NextResponse.json({ affectedRows: result.rowCount });
 }

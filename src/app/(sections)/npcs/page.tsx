@@ -1,4 +1,4 @@
-// src/app/(sections)/npcs/page.tsx
+// src/app/(sections)/personajes/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -16,11 +16,7 @@ type Npc = {
 
 const DEFAULT_BG = "/images/Bosque.jpg";
 
-/** Resuelve rutas de imagen:
- * - http(s):// o data: -> usar tal cual (Blob u otra URL pública)
- * - /algo -> ruta absoluta de la app
- * - nombre.png -> asume /tokens/nombre.png (carpeta local)
- */
+/** Normaliza rutas de imagen para mostrar */
 function resolveImg(v?: string | null) {
   if (!v) return null;
   const s = v.trim();
@@ -34,19 +30,24 @@ export default function NpcsPage() {
   const [npcs, setNpcs] = useState<Npc[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // modal crear/editar
+  // Modal crear
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editing, setEditing] = useState<Npc | null>(null);
 
-  // form state
+  // Form crear
   const [formNombre, setFormNombre] = useState("");
   const [formInformacion, setFormInformacion] = useState("");
   const [formClasificacion, setFormClasificacion] = useState("");
   const [formImagen, setFormImagen] = useState("");
   const [formRango, setFormRango] = useState<number | "">("");
 
-  // modal ver detalle
+  // Modal ver/editar detalle
   const [viewing, setViewing] = useState<Npc | null>(null);
+  const [isEditingDetail, setIsEditingDetail] = useState(false);
+  const [dNombre, setDNombre] = useState("");
+  const [dClasificacion, setDClasificacion] = useState("");
+  const [dInformacion, setDInformacion] = useState("");
+  const [dRango, setDRango] = useState<number | "">("");
+  const [dImagen, setDImagen] = useState("");
 
   useEffect(() => {
     cargarNpcs();
@@ -62,8 +63,8 @@ export default function NpcsPage() {
     }
   }
 
+  // ===== CREAR =====
   function abrirCrear() {
-    setEditing(null);
     setFormNombre("");
     setFormInformacion("");
     setFormClasificacion("");
@@ -71,65 +72,35 @@ export default function NpcsPage() {
     setFormRango("");
     setIsFormOpen(true);
   }
-
-  function abrirEditar(npc: Npc) {
-    setEditing(npc);
-    setFormNombre(npc.nombre ?? "");
-    setFormInformacion(npc.informacion ?? "");
-    setFormClasificacion(npc.clasificacion ?? "");
-    setFormImagen(npc.imagen ?? "");
-    setFormRango(npc.rango ?? "");
-    setIsFormOpen(true);
-  }
-
   function cerrarForm() {
     setIsFormOpen(false);
   }
-
-  async function guardarNpc() {
+  async function guardarNpcNuevo() {
     const nombre = formNombre.trim();
     if (!nombre) return;
 
-    const rango =
-      formRango === "" ? null : Math.max(0, Number.isFinite(formRango as number) ? Number(formRango) : 0);
-      console.log("[Guardar NPC] imagen:", formImagen);
+    const rango = formRango === "" ? null : Math.max(0, Number(formRango) || 0);
 
-    if (editing) {
-      // EDITAR: no tocamos imagen_fondo (se mantiene la de BD)
-      const payload = {
-        id_npc: editing.id_npc,
-        nombre,
-        informacion: formInformacion.trim() || null,
-        clasificacion: formClasificacion.trim() || null,
-        imagen: formImagen.trim() || null,
-        rango,
-      };
-      await fetch("/api/npcs", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    } else {
-      // CREAR: imagen_fondo por defecto Bosque.jpg
-      const payload = {
-        nombre,
-        informacion: formInformacion.trim() || null,
-        clasificacion: formClasificacion.trim() || null,
-        imagen: formImagen.trim() || null,
-        imagen_fondo: "Bosque.jpg",
-        rango,
-      };
-      await fetch("/api/npcs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    }
+    const payload = {
+      nombre,
+      informacion: formInformacion.trim() || null,
+      clasificacion: formClasificacion.trim() || null,
+      imagen: formImagen.trim() || null,
+      imagen_fondo: "Bosque.jpg",
+      rango,
+    };
+
+    await fetch("/api/npcs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
     setIsFormOpen(false);
     await cargarNpcs();
   }
 
+  // ===== ELIMINAR =====
   async function eliminarNpc(id: number) {
     if (!confirm("¿Eliminar este NPC?")) return;
     await fetch("/api/npcs", {
@@ -138,9 +109,10 @@ export default function NpcsPage() {
       body: JSON.stringify({ id_npc: id }),
     });
     await cargarNpcs();
+    if (viewing?.id_npc === id) setViewing(null);
   }
 
-  // Layout tarjetas
+  // ===== AGRUPACIÓN =====
   const gridCols = useMemo(
     () => ({
       display: "grid",
@@ -150,7 +122,6 @@ export default function NpcsPage() {
     []
   );
 
-  // Agrupación por rango
   const ranks = useMemo(() => {
     const set = new Set<number>();
     for (const n of npcs) {
@@ -168,13 +139,14 @@ export default function NpcsPage() {
     [npcs]
   );
 
+  // ===== TARJETAS =====
   const renderCard = (n: Npc) => {
     const src = resolveImg(n.imagen);
     return (
       <div
         key={n.id_npc}
         className="panel"
-        style={{ margin: 0 }}
+        style={{ margin: 0, cursor: "pointer" }}
         onClick={() => setViewing(n)}
       >
         <div className="panel-head" style={{ justifyContent: "space-between" }}>
@@ -209,7 +181,9 @@ export default function NpcsPage() {
               </div>
             </div>
           </div>
-          <div className="muted" style={{ fontSize: 12 }}>Rango: {n.rango ?? "—"}</div>
+          <div className="muted" style={{ fontSize: 12 }}>
+            Rango: {n.rango ?? "—"}
+          </div>
         </div>
 
         <div style={{ padding: "0.8rem 1rem 1rem" }}>
@@ -235,7 +209,9 @@ export default function NpcsPage() {
       <div className="panel" key={`rango-${r}`}>
         <div className="panel-head">
           <h2>Rango {r}</h2>
-          <span className="muted">{grupo.length} NPC{grupo.length !== 1 && "s"}</span>
+          <span className="muted">
+            {grupo.length} NPC{grupo.length !== 1 && "s"}
+          </span>
         </div>
         <div className="table-wrap" style={{ padding: "1rem" }}>
           <div style={gridCols}>{grupo.map(renderCard)}</div>
@@ -244,12 +220,86 @@ export default function NpcsPage() {
     );
   };
 
+  // ===== EDICIÓN INLINE EN EL MODAL DE DETALLE =====
+  function startDetailEdit(n: Npc) {
+    setDNombre(n.nombre ?? "");
+    setDClasificacion(n.clasificacion ?? "");
+    setDInformacion(n.informacion ?? "");
+    setDRango(n.rango ?? "");
+    setDImagen(n.imagen ?? "");
+    setIsEditingDetail(true);
+  }
+
+  function cancelDetailEdit() {
+    setIsEditingDetail(false);
+  }
+
+  async function saveDetailEdit() {
+    if (!viewing) return;
+    const nombre = dNombre.trim();
+    if (!nombre) return;
+
+    const rango = dRango === "" ? null : Math.max(0, Number(dRango) || 0);
+    const payload = {
+      id_npc: viewing.id_npc,
+      nombre,
+      clasificacion: dClasificacion.trim() || null,
+      informacion: dInformacion.trim() || null,
+      imagen: dImagen.trim() || null,
+      // imagen_fondo NO se toca aquí
+      rango,
+    };
+
+    const res = await fetch("/api/npcs", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      // Actualizar estado local sin recargar todo
+      setNpcs((prev) =>
+        prev.map((x) =>
+          x.id_npc === viewing.id_npc
+            ? {
+                ...x,
+                nombre: payload.nombre,
+                clasificacion: payload.clasificacion,
+                informacion: payload.informacion,
+                imagen: payload.imagen,
+                rango: payload.rango,
+              }
+            : x
+        )
+      );
+      // Reflejar en el modal abierto
+      setViewing((v) =>
+        v
+          ? {
+              ...v,
+              nombre: payload.nombre,
+              clasificacion: payload.clasificacion,
+              informacion: payload.informacion,
+              imagen: payload.imagen,
+              rango: payload.rango,
+            }
+          : v
+      );
+      setIsEditingDetail(false);
+    } else {
+      const e = await res.json().catch(() => ({}));
+      alert(e?.error ?? "Error guardando cambios");
+    }
+  }
+
   return (
     <section className="detail-wrap">
       <div className="panel">
         <div className="panel-head">
           <h2>NPCs</h2>
-          <button className="btn-accent" onClick={abrirCrear}>Nuevo NPC</button>
+          <button className="btn-accent" onClick={abrirCrear}>
+            Nuevo NPC
+          </button>
         </div>
       </div>
 
@@ -259,7 +309,9 @@ export default function NpcsPage() {
         <div className="panel" key="rango-none">
           <div className="panel-head">
             <h2>Sin rango</h2>
-            <span className="muted">{sinRango.length} NPC{sinRango.length !== 1 && "s"}</span>
+            <span className="muted">
+              {sinRango.length} NPC{sinRango.length !== 1 && "s"}
+            </span>
           </div>
           <div className="table-wrap" style={{ padding: "1rem" }}>
             <div style={gridCols}>{sinRango.map(renderCard)}</div>
@@ -267,7 +319,7 @@ export default function NpcsPage() {
         </div>
       )}
 
-      {/* MODAL: Ver detalle */}
+      {/* MODAL: Ver detalle + Edición inline */}
       {viewing && (
         <div className="modal-overlay">
           <div
@@ -275,7 +327,9 @@ export default function NpcsPage() {
             style={{
               backgroundImage: `url(${
                 viewing.imagen_fondo
-                  ? (viewing.imagen_fondo.startsWith("/") ? viewing.imagen_fondo : `/images/${viewing.imagen_fondo}`)
+                  ? viewing.imagen_fondo.startsWith("/")
+                    ? viewing.imagen_fondo
+                    : `/images/${viewing.imagen_fondo}`
                   : DEFAULT_BG
               })`,
               backgroundSize: "cover",
@@ -283,59 +337,147 @@ export default function NpcsPage() {
             }}
           >
             <div className="modal-head" style={{ background: "rgba(0,0,0,.35)" }}>
-              <h3>{viewing.nombre}</h3>
-              <button className="btn-ghost" onClick={() => setViewing(null)}>✖</button>
+              <h3>{isEditingDetail ? "Editar NPC" : viewing.nombre}</h3>
+              <button className="btn-ghost" onClick={() => setViewing(null)}>
+                ✖
+              </button>
             </div>
-            <div className="modal-body" style={{ background: "rgba(18,14,22,.65)", borderTop: "1px solid #2c2233" }}>
+
+            <div
+              className="modal-body"
+              style={{ background: "rgba(18,14,22,.65)", borderTop: "1px solid #2c2233" }}
+            >
+              {/* Avatar */}
               <div style={{ display: "grid", placeItems: "center", marginBottom: ".8rem" }}>
                 <div
                   style={{
-                    width: 160, height: 160, borderRadius: "50%",
-                    overflow: "hidden", border: "1px solid #3a2d43", background: "#1c1721",
+                    width: 160,
+                    height: 160,
+                    borderRadius: "50%",
+                    overflow: "hidden",
+                    border: "1px solid #3a2d43",
+                    background: "#1c1721",
                   }}
                 >
-                  {resolveImg(viewing.imagen) ? (
+                  {resolveImg(isEditingDetail ? dImagen : viewing.imagen) ? (
                     <img
                       alt={viewing.nombre ?? ""}
-                      src={resolveImg(viewing.imagen)!}
+                      src={resolveImg(isEditingDetail ? dImagen : viewing.imagen)!}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
                   ) : (
-                    <div style={{ display: "grid", placeItems: "center", height: "100%", fontSize: 56 }}>🧛</div>
+                    <div
+                      style={{
+                        display: "grid",
+                        placeItems: "center",
+                        height: "100%",
+                        fontSize: 56,
+                      }}
+                    >
+                      🧛
+                    </div>
                   )}
                 </div>
               </div>
-              <p><b>Rango:</b> {viewing.rango ?? "—"}</p>
-              <p><b>Clasificación:</b> {viewing.clasificacion ?? "—"}</p>
-              <p style={{ whiteSpace: "pre-wrap" }}>
-                <b>Información:</b><br />{viewing.informacion ?? "—"}
-              </p>
-              <div style={{ display: "flex", gap: ".4rem", justifyContent: "flex-end" }}>
-                <button className="btn-ghost" onClick={() => abrirEditar(viewing)}>Editar</button>
-                <button className="btn-ghost" onClick={() => eliminarNpc(viewing.id_npc)}>Eliminar</button>
-              </div>
+
+              {/* Campos lectura o edición */}
+              {!isEditingDetail ? (
+                <>
+                  <p>
+                    <b>Rango:</b> {viewing.rango ?? "—"}
+                  </p>
+                  <p>
+                    <b>Clasificación:</b> {viewing.clasificacion ?? "—"}
+                  </p>
+                  <p style={{ whiteSpace: "pre-wrap" }}>
+                    <b>Información:</b>
+                    <br />
+                    {viewing.informacion ?? "—"}
+                  </p>
+
+                  <div style={{ display: "flex", gap: ".4rem", justifyContent: "flex-end" }}>
+                    <button className="btn-ghost" onClick={() => startDetailEdit(viewing)}>
+                      Editar
+                    </button>
+                    <button className="btn-ghost" onClick={() => eliminarNpc(viewing.id_npc)}>
+                      Eliminar
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <label>Nombre</label>
+                  <input value={dNombre} onChange={(e) => setDNombre(e.target.value)} />
+
+                  <label>Clasificación</label>
+                  <input
+                    value={dClasificacion}
+                    onChange={(e) => setDClasificacion(e.target.value)}
+                  />
+
+                  <label>Información</label>
+                  <textarea
+                    value={dInformacion}
+                    onChange={(e) => setDInformacion(e.target.value)}
+                  />
+
+                  <label>Rango</label>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="(opcional) 1, 2, 3…"
+                    value={dRango}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setDRango(v === "" ? "" : Math.max(0, Number(v)));
+                    }}
+                  />
+
+                  <ImageUploader
+                    label="Imagen (token/NPC)"
+                    onUploaded={(url) => setDImagen(url)}
+                  />
+
+                  <div style={{ display: "flex", gap: ".4rem", justifyContent: "flex-end" }}>
+                    <button className="btn-ghost" onClick={cancelDetailEdit}>
+                      Cancelar
+                    </button>
+                    <button className="btn-accent" onClick={saveDetailEdit}>
+                      Guardar
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL: Crear / Editar */}
+      {/* MODAL: Crear (solo para nuevos, edición ya es inline en detalle) */}
       {isFormOpen && (
         <div className="modal-overlay">
           <div className="modal-card">
             <div className="modal-head">
-              <h3>{editing ? "Editar NPC" : "Nuevo NPC"}</h3>
-              <button className="btn-ghost" onClick={cerrarForm}>✖</button>
+              <h3>Nuevo NPC</h3>
+              <button className="btn-ghost" onClick={cerrarForm}>
+                ✖
+              </button>
             </div>
             <div className="modal-body">
               <label>Nombre</label>
               <input value={formNombre} onChange={(e) => setFormNombre(e.target.value)} />
 
               <label>Clasificación</label>
-              <input value={formClasificacion} onChange={(e) => setFormClasificacion(e.target.value)} />
+              <input
+                value={formClasificacion}
+                onChange={(e) => setFormClasificacion(e.target.value)}
+              />
 
               <label>Información</label>
-              <textarea value={formInformacion} onChange={(e) => setFormInformacion(e.target.value)} />
+              <textarea
+                value={formInformacion}
+                onChange={(e) => setFormInformacion(e.target.value)}
+              />
 
               <label>Rango</label>
               <input
@@ -349,28 +491,21 @@ export default function NpcsPage() {
                 }}
               />
 
-              {/* Subida de imagen: guarda URL pública (Blob o similar) en `formImagen` */}
-              <ImageUploader
-                label="Imagen (token/NPC)"
-                onUploaded={(url) => setFormImagen(url)}
-              />
+              <ImageUploader label="Imagen (token/NPC)" onUploaded={(url) => setFormImagen(url)} />
             </div>
             <div className="modal-actions">
-              <button className="btn-ghost" onClick={cerrarForm}>Cancelar</button>
-              <button className="btn-accent" onClick={guardarNpc}>{editing ? "Guardar cambios" : "Crear"}</button>
+              <button className="btn-ghost" onClick={cerrarForm}>
+                Cancelar
+              </button>
+              <button className="btn-accent" onClick={guardarNpcNuevo}>
+                Crear
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      <style jsx>{`
-        .modal-overlay{ position: fixed; inset:0; background: rgba(0,0,0,.55); display:grid; place-items:center; z-index:60; }
-        .modal-card{ width:min(720px, 94vw); background: linear-gradient(180deg, #15111a, #120e16); border:1px solid #2c2233; border-radius:14px; box-shadow: var(--shadow); color: var(--ink); }
-        .modal-head{ display:flex; align-items:center; justify-content:space-between; padding:.9rem 1rem; border-bottom:1px solid #2c2233; }
-        .modal-body{ display:grid; gap:.6rem; padding:1rem; }
-        .modal-body input, .modal-body textarea { background:#1c1721; border:1px solid #2c2233; border-radius:10px; color:var(--ink); padding:.55rem .7rem; }
-        .modal-actions{ display:flex; gap:.6rem; justify-content:flex-end; padding:0 1rem 1rem; }
-      `}</style>
+
     </section>
   );
 }

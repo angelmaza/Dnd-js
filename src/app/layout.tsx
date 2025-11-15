@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {children}
             </main>
           </div>
-          <footer className="footer">© {new Date().getFullYear()} DnD_js</footer>
+          {/* <footer className="footer">© {new Date().getFullYear()} DnD_js</footer> */}
         </div>
       </body>
     </html>
