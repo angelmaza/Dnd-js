@@ -5,13 +5,24 @@ import { NextResponse } from "next/server";
 import { query, execute } from "@/lib/db";
 import type { PersonajeRow } from "@/entidades/db";
 
+/** Extrae el id numérico del final de la URL del request.
+ *  Devuelve null si no es un número válido. */
+function getIdFromRequest(req: Request): number | null {
+  try {
+    const url = new URL(req.url);
+    const segments = url.pathname.split("/").filter(Boolean);
+    const idStr = segments[segments.length - 1];
+    const numId = Number(idStr);
+    return Number.isFinite(numId) ? numId : null;
+  } catch {
+    return null;
+  }
+}
+
 // GET /api/personajes/:id
-export async function GET(
-  _req: Request,
-  { params }: { params: { id: string } }   // ← NO Promise
-) {
-  const numId = Number(params.id);
-  if (!Number.isFinite(numId)) {
+export async function GET(req: Request) {
+  const numId = getIdFromRequest(req);
+  if (numId === null) {
     return NextResponse.json({ error: "id inválido" }, { status: 400 });
   }
 
@@ -26,16 +37,14 @@ export async function GET(
   if (rows.length === 0) {
     return NextResponse.json({ error: "No encontrado" }, { status: 404 });
   }
+
   return NextResponse.json(rows[0]);
 }
 
 // PUT /api/personajes/:id
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }   // ← NO Promise
-) {
-  const numId = Number(params.id);
-  if (!Number.isFinite(numId)) {
+export async function PUT(req: Request) {
+  const numId = getIdFromRequest(req);
+  if (numId === null) {
     return NextResponse.json({ error: "id inválido" }, { status: 400 });
   }
 
@@ -50,13 +59,15 @@ export async function PUT(
     return NextResponse.json({ error: "Body inválido" }, { status: 400 });
   }
 
-  // Si un campo viene como undefined => no modificar.
-  // Si viene como null => poner a NULL en BD.
-  // Si viene string "" => se guardará "" (vacío).
-  const nombre = typeof body.nombre === "string" ? body.nombre.trim() : undefined;
-  const informacion = body.informacion === undefined ? undefined : body.informacion ?? null;
-  const imagen = body.imagen === undefined ? undefined : body.imagen ?? null;
-  const imagen_fondo = body.imagen_fondo === undefined ? undefined : body.imagen_fondo ?? null;
+  // undefined => no modificar; null => poner a NULL; "" => se guarda vacío
+  const nombre =
+    typeof body.nombre === "string" ? body.nombre.trim() : undefined;
+  const informacion =
+    body.informacion === undefined ? undefined : body.informacion ?? null;
+  const imagen =
+    body.imagen === undefined ? undefined : body.imagen ?? null;
+  const imagen_fondo =
+    body.imagen_fondo === undefined ? undefined : body.imagen_fondo ?? null;
 
   try {
     const res = await execute(
@@ -78,20 +89,26 @@ export async function PUT(
     if (res.rowCount === 0) {
       return NextResponse.json({ error: "No encontrado" }, { status: 404 });
     }
+
     return NextResponse.json({ ok: true });
-  } catch (err: any) {
-    console.error("Error actualizando personaje:", err?.stack || err?.message || err);
-    return NextResponse.json({ error: "Error actualizando personaje" }, { status: 500 });
+  } catch (err) {
+    const msg =
+      err instanceof Error
+        ? `${err.name}: ${err.message}\n${err.stack ?? ""}`
+        : String(err);
+
+    console.error("Error actualizando personaje:", msg);
+    return NextResponse.json(
+      { error: "Error actualizando personaje" },
+      { status: 500 }
+    );
   }
 }
 
 // DELETE /api/personajes/:id
-export async function DELETE(
-  _req: Request,
-  { params }: { params: { id: string } }   // ← NO Promise
-) {
-  const numId = Number(params.id);
-  if (!Number.isFinite(numId)) {
+export async function DELETE(req: Request) {
+  const numId = getIdFromRequest(req);
+  if (numId === null) {
     return NextResponse.json({ error: "id inválido" }, { status: 400 });
   }
 
@@ -103,5 +120,6 @@ export async function DELETE(
   if (result.rowCount === 0) {
     return NextResponse.json({ error: "No encontrado" }, { status: 404 });
   }
+
   return NextResponse.json({ affectedRows: result.rowCount });
 }
