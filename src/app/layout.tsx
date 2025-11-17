@@ -15,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <div className="shell">
           <header className="topbar">
-            <div className="brand">DnD_js</div>
+            <div className="brand">La Maldición de Strahd</div>
             <ResourceBar />
           </header>
           <div className="layout">

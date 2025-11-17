@@ -14,16 +14,13 @@ export async function POST(req: Request) {
     !Array.isArray(receta.Elementos) ||
     receta.Elementos.length === 0
   ) {
-    return NextResponse.json(
-      { error: "Receta inválida" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Receta inválida" }, { status: 400 });
   }
 
   const nombreProducto = receta.NombreProducto.trim();
   const descripcion = receta.Descripcion ?? null;
 
-  // 1) Crear Producto (Postgres: RETURNING)
+  // 1) Crear Producto
   const prodRows = await query<{ id_producto: number }>(
     `INSERT INTO "Productos" (nombre, descripcion, toxicidad)
      VALUES ($1, $2, $3)
@@ -32,10 +29,7 @@ export async function POST(req: Request) {
   );
 
   if (!prodRows.length) {
-    return NextResponse.json(
-      { error: "No se pudo crear el producto" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "No se pudo crear el producto" }, { status: 500 });
   }
 
   const idProducto = prodRows[0].id_producto;
@@ -57,9 +51,7 @@ export async function POST(req: Request) {
       [nombreElemento]
     );
 
-    if (!elemRows.length) {
-      continue;
-    }
+    if (!elemRows.length) continue;
 
     const idElemento = elemRows[0].id_elemento;
 
@@ -70,8 +62,74 @@ export async function POST(req: Request) {
     );
   }
 
-  return NextResponse.json(
-    { id_producto: idProducto },
-    { status: 201 }
+  return NextResponse.json({ id_producto: idProducto }, { status: 201 });
+}
+
+/** DELETE: eliminar receta (producto) y sus relaciones
+ * Body admitido:
+ *  - { "id_producto": number }
+ *  - { "nombre": string }  // opcional, por si prefieres borrar por nombre
+ */
+export async function DELETE(req: Request) {
+  const body = (await req.json().catch(() => null)) as
+    | { id_producto?: unknown; nombre?: unknown }
+    | null;
+
+  if (!body || (body.id_producto == null && body.nombre == null)) {
+    return NextResponse.json(
+      { error: "Debe indicar 'id_producto' o 'nombre'." },
+      { status: 400 }
+    );
+  }
+
+  // Resolver id a partir del body
+  let idProducto: number | null = null;
+
+  // Prioridad: id_producto si es numérico
+  if (typeof body.id_producto === "number" && Number.isFinite(body.id_producto)) {
+    idProducto = body.id_producto;
+  } else if (typeof body.id_producto === "string" && body.id_producto.trim() !== "") {
+    const parsed = Number(body.id_producto);
+    if (Number.isFinite(parsed)) idProducto = parsed;
+  }
+
+  // Si no hay id válido, intentar por nombre
+  if (idProducto == null && typeof body.nombre === "string" && body.nombre.trim() !== "") {
+    const rows = await query<{ id_producto: number }>(
+      `SELECT id_producto FROM "Productos" WHERE nombre = $1 LIMIT 1`,
+      [body.nombre.trim()]
+    );
+    if (rows.length) idProducto = rows[0].id_producto;
+  }
+
+  if (idProducto == null) {
+    return NextResponse.json({ error: "Identificador inválido" }, { status: 400 });
+  }
+
+  // Comprobar existencia
+  const existe = await query<{ id_producto: number }>(
+    `SELECT id_producto FROM "Productos" WHERE id_producto = $1 LIMIT 1`,
+    [idProducto]
   );
+  if (!existe.length) {
+    return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+  }
+
+  // Borrar relaciones y luego el producto
+  // (si tienes ON DELETE CASCADE, podrías omitir el primer DELETE)
+  await execute(
+    `DELETE FROM "Recetas_producto_elemento" WHERE id_producto = $1`,
+    [idProducto]
+  );
+
+  const del = await execute(
+    `DELETE FROM "Productos" WHERE id_producto = $1`,
+    [idProducto]
+  );
+
+  if (del.rowCount === 0) {
+    return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true, id_producto: idProducto });
 }
