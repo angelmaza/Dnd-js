@@ -30,47 +30,75 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/");
+    router.push("/quests");
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-black/80">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-xs flex flex-col gap-4"
-      >
-        <h1 className="text-xl font-semibold text-white text-center">
-          DnD_js · Acceso
-        </h1>
+    <div
+      style={{
+        minHeight: "50dvh",
+        display: "grid",
+        placeItems: "center",
+        padding: "1rem",
+        backgroundBlendMode: "multiply",
+      }}
+    >
+      <div className="panel" style={{ width: "min(440px, 94vw)", margin: 0 }}>
+        <div className="panel-head">
+          <h2 style={{ margin: 0 }}>Acceso</h2>
+        </div>
 
-        <input
-          type="text"
-          placeholder="Nombre"
-          className="w-full rounded-md px-3 py-2 bg-zinc-800 text-white border border-zinc-600 focus:outline-none focus:ring focus:ring-red-500/60"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-        />
+        <form onSubmit={handleSubmit} className="modal-body" style={{ paddingTop: ".9rem" }}>
+          <div>
+            <label className="muted" style={{ display: "block", marginBottom: ".25rem" }}>
+              Nombre de usuario
+            </label>
+            <input
+              type="text"
+              placeholder="Nombre"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+            />
+          </div>
 
-        <input
-          type="password"
-          placeholder="Contraseña"
-          className="w-full rounded-md px-3 py-2 bg-zinc-800 text-white border border-zinc-600 focus:outline-none focus:ring focus:ring-red-500/60"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          <div>
+            <label className="muted" style={{ display: "block", marginBottom: ".25rem" }}>
+              Contraseña
+            </label>
+            <input
+              type="password"
+              placeholder="Contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
 
-        {error && (
-          <p className="text-red-400 text-sm text-center">{error}</p>
-        )}
+          {error && (
+            <div
+              className="empty"
+              style={{
+                borderColor: "#5d0e1a",
+                background: "rgba(138,15,38,.12)",
+                color: "#fca5a5",
+                textAlign: "left",
+              }}
+            >
+              {error}
+            </div>
+          )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-md px-3 py-2 bg-red-600 text-white font-medium hover:bg-red-500 disabled:opacity-60"
-        >
-          {loading ? "Entrando..." : "Entrar"}
-        </button>
-      </form>
+          <div className="modal-actions right" style={{ paddingTop: 0 }}>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-accent"
+              style={{ minWidth: 120, opacity: loading ? 0.7 : 1 }}
+            >
+              {loading ? "Entrando…" : "Entrar"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

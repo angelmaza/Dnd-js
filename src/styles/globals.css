@@ -19,7 +19,7 @@
 
 /* --------- Base --------- */
 *{ box-sizing: border-box; }
-html, body { height: 100%; }
+/* html, body { height: 100%; } */
 body{
   margin:0;
   background:
@@ -48,7 +48,7 @@ body{
 .layout{ display:grid; grid-template-columns: max-content 1fr; gap: 0; flex:1; }
 
 .sidebar{
-  position: sticky; top:0; height: calc(100dvh - 64px);
+  position: sticky; top:0; height: calc(100dvh);
   background: linear-gradient(180deg, #15111a, #120e16);
   border-right: 1px solid #2c2233;
   padding: 1rem .5rem;
@@ -57,8 +57,8 @@ body{
 
 .content{
   padding: 1.25rem 1.25rem 2.5rem;
-  background: url('/textures/parchment.jpg') center/cover fixed;
-  background-blend-mode: overlay;
+  /* background: url('/textures/parchment.jpg') center/cover fixed; */
+  /* background-blend-mode: overlay; */
 }
 .content h1{ font-family: Cinzel, serif; letter-spacing:.5px; margin: .2rem 0 1rem; }
 
@@ -152,7 +152,7 @@ body{
 /* --------- Paneles / tablas / botones --------- */
 .panel {
   margin: 1.2rem 0 2rem;
-  background: rgba(0,0,0,.15);
+  /* background: rgba(0,0,0,.15); */
   border: 1px solid #2c2233;
   border-radius: 14px;
   overflow: hidden;
@@ -180,12 +180,13 @@ body{
 
 .btn { padding: .5rem .8rem; border-radius: 10px; border: 1px solid #2c2233; background: #241d28; color: #fff; cursor: pointer; }
 .btn-accent {
+  margin: 3px;
   padding: .5rem .8rem; border-radius: 10px;
   border: 1px solid #4b0c18;
   background: linear-gradient(90deg, rgba(138,15,38,.6), rgba(93,14,26,.6));
   color: #fff; cursor: pointer;
 }
-.btn-ghost { padding: .38rem .7rem; border-radius: 10px; border: 1px solid #2c2233; background: #241d28; color: #fff; cursor: pointer; }
+.btn-ghost { margin: 3px; padding: .38rem .7rem; border-radius: 10px; border: 1px solid #2c2233; background: #241d28; color: #fff; cursor: pointer; }
 .muted { color: var(--muted); }
 
 .empty {
@@ -332,7 +333,7 @@ body{
 
 /* PERSONAJE Y MISION */
 /* ==== MEDIA CARD (detalle de personaje/misión) ==== */
-.detail-wrap { max-width: 1100px; margin: 0 auto; padding: .25rem; }
+.detail-wrap { max-width: 1100px; margin: 0 auto; padding: .15rem; }
 
 .media-card {
   display: grid;
@@ -583,12 +584,13 @@ body{
             /* ===== MISIONES ===== */
 
 .modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  /* position: fixed; */
+  height: 100%;
+  /* inset: 0; */
+  background: rgba(220, 205, 205, 0.55);
   display: grid;
   place-items: center;
-  z-index: 60;
+  /* z-index: 60; */
 }
 
 .modal-card {
@@ -604,14 +606,19 @@ body{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.9rem 1rem;
-  border-bottom: 1px solid #2c2233;
+  padding: 0.5rem;
+  border-bottom: 14px solid #2c2233;
 }
 
 .modal-body {
   display: grid;
   gap: 0.6rem;
-  padding: 1rem;
+  /* padding: 0px;
+  margin: 0px; */
+}
+
+.modal-gridgrande {
+  gap: 0px;
 }
 
 .modal-body input,
@@ -676,11 +683,11 @@ body{
   border-bottom: 1px solid #2c2233;
 }
 
-.modal-body {
+/* .modal-body {
   display: grid;
   gap: 0.6rem;
   padding: 1rem;
-}
+} */
 
 .modal-body input,
 .modal-body textarea {

@@ -321,9 +321,9 @@ export default function NpcsPage() {
 
       {/* MODAL: Ver detalle + Edición inline */}
       {viewing && (
-        <div className="modal-overlay">
+        <div className="modal-overlay modal-gridgrande">
           <div
-            className="modal-card"
+            className="modal-card modal-gridgrande"
             style={{
               backgroundImage: `url(${
                 viewing.imagen_fondo
@@ -344,18 +344,20 @@ export default function NpcsPage() {
             </div>
 
             <div
-              className="modal-body"
+              className="modal-body modal-gridgrande"
               style={{ background: "rgba(18,14,22,.65)", borderTop: "1px solid #2c2233" }}
             >
               {/* Avatar */}
-              <div style={{ display: "grid", placeItems: "center", marginBottom: ".8rem" }}>
+              <div style={{ display: "grid", placeItems: "center", marginBottom: "0px" }}>
                 <div
                   style={{
-                    width: 160,
-                    height: 160,
+                    width: 120,
+                    height: 120,
                     borderRadius: "50%",
                     overflow: "hidden",
                     border: "1px solid #3a2d43",
+                    margin: '0px',
+                    padding: '0px',
                     background: "#1c1721",
                   }}
                 >

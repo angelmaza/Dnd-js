@@ -3,12 +3,27 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+type MapDef = {
+  key: string;
+  title: string;
+  src: string;
+  baseWidth: number; // ancho base sobre el que se aplica el zoom
+};
+
+const MAPS: MapDef[] = [
+  { key: "barovia", title: "Barovia", src: "/images/Map_Barovia.webp", baseWidth: 1200 },
+  { key: "vallaki", title: "Vallaki", src: "/images/vallaki.webp", baseWidth: 1200 },
+];
+
 export default function BaroviaPage() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
-  const [scale, setScale] = useState(1);           // nivel de zoom
-  const [translate, setTranslate] = useState({ x: 0, y: 0 }); // desplazamiento (pan)
+  const [activeKey, setActiveKey] = useState<string>(MAPS[0].key);
+  const activeMap = MAPS.find(m => m.key === activeKey) ?? MAPS[0];
+
+  const [scale, setScale] = useState(1);
+  const [translate, setTranslate] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
 
@@ -16,65 +31,59 @@ export default function BaroviaPage() {
   const MAX = 4;
   const STEP = 0.25;
 
-  // limitar valores
   const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
-  const resetView = () => {
+  const resetView = useCallback(() => {
     setScale(1);
     setTranslate({ x: 0, y: 0 });
-  };
+  }, []);
 
-  // Aplicar zoom hacia el punto del cursor
-  const zoomAt = useCallback((delta: number, clientX?: number, clientY?: number) => {
-    const nextScale = clamp(scale + delta, MIN, MAX);
-    if (nextScale === scale) return;
+  // Cuando cambias de mapa, resetea vista
+  useEffect(() => {
+    resetView();
+  }, [activeKey, resetView]);
 
-    // Si no hay contenedor o no hay punto de referencia, hacemos zoom centrado
-    const cont = containerRef.current;
-    const content = contentRef.current;
-    if (!cont || !content || clientX == null || clientY == null) {
+  // Zoom hacia el cursor
+  const zoomAt = useCallback(
+    (delta: number, clientX?: number, clientY?: number) => {
+      const nextScale = clamp(scale + delta, MIN, MAX);
+      if (nextScale === scale) return;
+
+      const cont = containerRef.current;
+      const content = contentRef.current;
+      if (!cont || !content || clientX == null || clientY == null) {
+        setScale(nextScale);
+        if (nextScale === 1) setTranslate({ x: 0, y: 0 });
+        return;
+      }
+
+      const rect = cont.getBoundingClientRect();
+      const cx = clientX - rect.left;
+      const cy = clientY - rect.top;
+
+      const k = nextScale / scale;
+      const newTx = cx - k * (cx - translate.x);
+      const newTy = cy - k * (cy - translate.y);
+
       setScale(nextScale);
+      setTranslate({ x: newTx, y: newTy });
+
       if (nextScale === 1) setTranslate({ x: 0, y: 0 });
-      return;
-    }
+    },
+    [scale, translate.x, translate.y]
+  );
 
-    // Coordenadas del cursor dentro del contenedor
-    const rect = cont.getBoundingClientRect();
-    const cx = clientX - rect.left;
-    const cy = clientY - rect.top;
-
-    // El truco: mantener fijo el punto bajo el cursor.
-    // x' = (x + tx)*k  => ajustamos tx para compensar el cambio de escala.
-    const k = nextScale / scale;
-    const newTx = cx - k * (cx - translate.x);
-    const newTy = cy - k * (cy - translate.y);
-
-    setScale(nextScale);
-    setTranslate({ x: newTx, y: newTy });
-
-    // Si volvemos a 1, recentramos
-    if (nextScale === 1) {
-      setTranslate({ x: 0, y: 0 });
-    }
-  }, [scale, translate.x, translate.y]);
-
-  // Rueda del ratón = zoom
   const onWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -STEP : STEP; // rueda hacia arriba -> acercar
+    const delta = e.deltaY > 0 ? -STEP : STEP;
     zoomAt(delta, e.clientX, e.clientY);
   };
 
-  // Doble click para acercar al cursor (o reset si ya está muy cerca)
   const onDoubleClick = (e: React.MouseEvent) => {
-    if (scale < 2) {
-      zoomAt(0.75, e.clientX, e.clientY);
-    } else {
-      resetView();
-    }
+    if (scale < 2) zoomAt(0.75, e.clientX, e.clientY);
+    else resetView();
   };
 
-  // Arrastrar para pan cuando hay zoom
   const onMouseDown = (e: React.MouseEvent) => {
     if (scale === 1) return;
     setIsPanning(true);
@@ -92,14 +101,13 @@ export default function BaroviaPage() {
     lastPoint.current = null;
   };
 
-  // Botones +/–
   const zoomIn = () => zoomAt(STEP);
   const zoomOut = () => zoomAt(-STEP);
 
-  // Evitar que el navegador haga scroll con la rueda sobre el contenedor
+  // Evita scroll de la página al hacer wheel sobre el contenedor
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return
+    if (!el) return;
     const handler = (e: WheelEvent) => e.preventDefault();
     el.addEventListener("wheel", handler, { passive: false });
     return () => el.removeEventListener("wheel", handler);
@@ -107,19 +115,33 @@ export default function BaroviaPage() {
 
   return (
     <section className="detail-wrap">
-      <div className="panel" style={{ overflow: "hidden" }}>
+      {/* Selector de mapas (rectángulos/píldoras) */}
+      <div className="panel">
         <div className="panel-head" style={{ justifyContent: "space-between" }}>
-          <h2>Barovia</h2>
-          <div style={{ display: "flex", gap: ".4rem" }}>
-            <button className="btn-ghost" onClick={zoomOut}>–</button>
-            <button className="btn-ghost" onClick={zoomIn}>＋</button>
-            <button className="btn-accent" onClick={resetView}>Reset</button>
+          <h2>Mapas de Barovia</h2>
+          <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap" }}>
+            {MAPS.map((m) => {
+              const active = m.key === activeKey;
+              return (
+                <button
+                  key={m.key}
+                  className={active ? "btn-accent" : "btn-ghost"}
+                  onClick={() => setActiveKey(m.key)}
+                  style={{ minWidth: 110 }}
+                >
+                  {m.title}
+                </button>
+              );
+            })}
           </div>
         </div>
 
+        {/* Controles de zoom/pan */}
+
+
+        {/* Visor de mapa único */}
         <div
           ref={containerRef}
-          className="map-container"
           onWheel={onWheel}
           onDoubleClick={onDoubleClick}
           onMouseDown={onMouseDown}
@@ -127,9 +149,8 @@ export default function BaroviaPage() {
           onMouseUp={endPan}
           onMouseLeave={endPan}
           style={{
-            // ocupa bien el área de contenido y evita scroll horizontal
             width: "100%",
-            height: "min(78vh, 900px)",
+            height: "100%",
             overflow: "hidden",
             display: "grid",
             placeItems: "center",
@@ -142,26 +163,33 @@ export default function BaroviaPage() {
               transform: `translate3d(${translate.x}px, ${translate.y}px, 0) scale(${scale})`,
               transformOrigin: "0 0",
               willChange: "transform",
-              // para que el cursor refleje el estado
               cursor: scale > 1 ? (isPanning ? "grabbing" : "grab") : "zoom-in",
               userSelect: "none",
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/images/Map_Barovia.webp"
-              alt="Mapa de Barovia"
+              src={activeMap.src}
+              alt={`Mapa de ${activeMap.title}`}
               style={{
                 display: "block",
-                width: "1200px", // tamaño base; ajústalo a tu imagen
+                width: `${activeMap.baseWidth}px`,
                 height: "auto",
                 maxWidth: "100%",
-                pointerEvents: "none", // el drag lo manejamos en el wrapper
+                pointerEvents: "none",
                 borderRadius: 12,
                 border: "1px solid #2c2233",
                 boxShadow: "var(--shadow)",
               }}
             />
+          </div>
+        </div>
+
+        <div className="table-wrap" style={{ padding: "1rem" }}>
+          <div style={{ display: "flex", gap: ".4rem", justifyContent: "center" }}>
+            <button className="btn-ghost" onClick={zoomOut}>–</button>
+            <button className="btn-ghost" onClick={zoomIn}>＋</button>
+            <button className="btn-accent" onClick={resetView}>Reset</button>
           </div>
         </div>
       </div>
