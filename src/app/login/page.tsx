@@ -11,18 +11,17 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
+async function handleSubmit(e: FormEvent) {
+  e.preventDefault();
+  setError(null);
+  setLoading(true);
 
+  try {
     const res = await fetch("/api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nombre, password }),
     });
-
-    setLoading(false);
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -30,9 +29,17 @@ export default function LoginPage() {
       return;
     }
 
-    console.log('Login Correcto. -> Quests')
-    router.push("/quests");
+    console.log("Login Correcto. -> Quests");
+
+    router.replace("/quests");
+    router.refresh();
+
+
+  } finally {
+    setLoading(false);
   }
+}
+
 
   return (
     <div
