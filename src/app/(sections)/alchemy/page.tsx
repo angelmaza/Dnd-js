@@ -20,7 +20,7 @@ type MaterialMap = {
 
 
 const MAX_ELEM = 5;
-const BASES = ["Aceite", "Grasa"] as const;
+const BASES = ["Aceite", "Alcohol"] as const;
 type BaseNombre = (typeof BASES)[number];
 
 export default function AlchemyPage() {
@@ -112,7 +112,7 @@ export default function AlchemyPage() {
         ["Albedo", "white"],
         ["Rubedo", "red"],
         ["Aceite", "gray"],
-        ["Grasa", ""],
+        ["Alcohol", ""],
       ]),
     []
   );
@@ -256,28 +256,26 @@ export default function AlchemyPage() {
   };
 
 
-// /* ===== acciones: extraer materiales ===== */
-// const extraer = async () => {
-//   if (!matSel || matCant <= 0) return;
+const extraerMaterial = async (id_material: number, cantidad: number) => {
+  const res = await fetch("/api/alchemy/extraer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id_material, cantidad }),
+  });
 
-//   const res = await fetch("/api/alchemy/extraer", {
-//     method: "POST",
-//     headers: { "Content-Type": "application/json" },
-//     body: JSON.stringify({ id_material: matSel, cantidad: matCant }),
-//   });
+  if (res.ok) {
+    // refrescar elementos
+    const re = await fetch("/api/alchemy/elementos", { cache: "no-store" });
+    if (re.ok) setElementos(await re.json());
+  } else {
+    const e = (await res.json().catch(() => ({ error: "Error al extraer materiales" }))) as {
+      error?: string;
+      detail?: string;
+    };
+    alert(e.error ?? "Error al extraer materiales");
+  }
+};
 
-//   if (res.ok) {
-//     refrescamos inventario de elementos y materiales
-//     const re = await fetch("/api/alchemy/elementos", { cache: "no-store" });
-//     if (re.ok) setElementos(await re.json());
-
-//     const rm = await fetch("/api/alchemy/mats", { cache: "no-store" });
-//     if (rm.ok) setMats(await rm.json());
-//   } else {
-//     const e = await res.json().catch(() => ({}));
-//     alert(e?.error ?? "Error al extraer materiales");
-//   }
-// };
 
 
   /* ===== Render ===== */
@@ -351,6 +349,7 @@ export default function AlchemyPage() {
         </div>
       </div>
 
+
       {/* ===== MAPA DE EXTRACCIÓN DE MATERIALES ===== */}
 <div className="panel">
   <div className="panel-head">
@@ -366,28 +365,42 @@ export default function AlchemyPage() {
           className="mission-card"
           style={{ margin: 0, cursor: "default" }}
         >
-          <div className="mission-card-head">
+          <div className="mission-card-head" style={{ justifyContent: "space-between", gap: ".75rem" }}>
             <div className="mission-card-titles">
               <div className="mission-card-title">
                 {m.material ?? "Material sin nombre"}
               </div>
-              <div className="mission-card-sub">
-                Stock actual: {m.cant_material}
-              </div>
             </div>
 
-            <div className="mission-card-tags">
+            <div style={{ display: "flex", gap: ".5rem", alignItems: "center" }}>
+              <button
+                className="btn-accent"
+                onClick={() => extraerMaterial(m.id_material, 1)}
+                disabled={m.elementos.length === 0}
+                title={m.elementos.length === 0 ? "Este material no tiene mapeo" : "Extraer 1 unidad"}
+              >
+                Extraer
+              </button>
+
+              {/* opcional: extraer x5 */}
+              {/* <button
+                className="btn"
+                onClick={() => extraerMaterial(m.id_material, 5)}
+                disabled={m.elementos.length === 0}
+                title={m.elementos.length === 0 ? "Este material no tiene mapeo" : "Extraer 5 unidades"}
+              >
+                Extraer x5
+              </button> */}
+            </div>
+
+            <div className="mission-card-tags" style={{ flexBasis: "100%" }}>
               <span className="muted">Elementos extraíbles:</span>
               <div style={{ display: "flex", flexWrap: "wrap", gap: ".25rem" }}>
                 {m.elementos.map((el, i) => {
                   const backgroundColor = colores.get(el.nombre) || "transparent";
                   const fg = textColor(backgroundColor || "");
                   return (
-                    <span
-                      key={i}
-                      className="badge"
-                      style={{ background: "transparent" }}
-                    >
+                    <span key={i} className="badge" style={{ background: "transparent" }}>
                       <span
                         style={{
                           background: backgroundColor,
@@ -409,7 +422,8 @@ export default function AlchemyPage() {
               </div>
             </div>
           </div>
-        </div>
+
+          </div>
       ))}
 
       {mats.length === 0 && (

@@ -9,13 +9,14 @@ type Body = {
   cantidad: number;
 };
 
-type MaterialRow = {
-  cantidad: number | null;
-};
-
 type ExtraMapRow = {
   id_elemento: number;
-  proporcion: number;
+  cant_extraible: number;
+};
+
+type IncRow = {
+  id_elemento: number;
+  inc: number;
 };
 
 export async function POST(req: Request) {
@@ -27,43 +28,18 @@ export async function POST(req: Request) {
     !Number.isFinite(body.cantidad) ||
     body.cantidad <= 0
   ) {
-    return NextResponse.json(
-      { error: "Payload inválido" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Payload inválido" }, { status: 400 });
   }
 
   const idMat = Number(body.id_material);
   const cant = Number(body.cantidad);
 
-  // 1) Comprobar material y stock
-  const mats = await query<MaterialRow>(
-    `SELECT cantidad
-       FROM "Materiales"
-      WHERE id_material = $1
-      LIMIT 1`,
-    [idMat]
-  );
-
-  if (mats.length === 0) {
-    return NextResponse.json(
-      { error: "Material no encontrado" },
-      { status: 404 }
-    );
-  }
-
-  const stock = mats[0].cantidad ?? 0;
-  if (stock < cant) {
-    return NextResponse.json(
-      { error: "Stock insuficiente de material" },
-      { status: 400 }
-    );
-  }
-
-  // 2) Proporciones
+  // =========================
+  // PASO 1) Leer mapeo de extracción
+  // =========================
   const mapRows = await query<ExtraMapRow>(
     `SELECT me.id_elemento,
-            me.cant_extraible AS proporcion
+            me.cant_extraible
        FROM "Mats_extraidos" me
       WHERE me.id_material = $1`,
     [idMat]
@@ -76,30 +52,40 @@ export async function POST(req: Request) {
     );
   }
 
-  // 3) Restar materiales
-  await execute(
-    `UPDATE "Materiales"
-        SET cantidad = cantidad - $1
-      WHERE id_material = $2`,
-    [cant, idMat]
-  );
-
-  // 4) Sumar elementos
+  const increments: IncRow[] = [];
   for (const row of mapRows) {
-    const inc = row.proporcion * cant; // ambos son number
-    if (inc > 0) {
-      await execute(
-        `UPDATE "Elementos"
-            SET cantidad = COALESCE(cantidad, 0) + $1
-          WHERE id_elemento = $2`,
-        [inc, row.id_elemento]
-      );
-    }
+    const extraible = Number(row.cant_extraible);
+    if (!Number.isFinite(extraible) || extraible <= 0) continue;
+
+    const inc = extraible * cant;
+    if (!Number.isFinite(inc) || inc <= 0) continue;
+
+    increments.push({ id_elemento: row.id_elemento, inc });
+  }
+
+  if (increments.length === 0) {
+    return NextResponse.json(
+      { error: "El mapeo existe, pero no hay nada que sumar (cant_extraible<=0)." },
+      { status: 400 }
+    );
+  }
+
+  // =========================
+  // PASO 2) Sumar en Elementos
+  // =========================
+  for (const it of increments) {
+    await execute(
+      `UPDATE "Elementos"
+          SET cantidad = COALESCE(cantidad, 0) + $1
+        WHERE id_elemento = $2`,
+      [it.inc, it.id_elemento]
+    );
   }
 
   return NextResponse.json({
     ok: true,
     id_material: idMat,
     cantidad: cant,
+    sumado: increments, // [{ id_elemento, inc }, ...]
   });
 }

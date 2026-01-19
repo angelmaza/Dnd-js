@@ -60,21 +60,17 @@ export function AlchemyGrid({
   return (
     <>
       <div className="alchemy-grid">
-
-        {/* ===== BOTÓN AÑADIR ===== */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: ".4rem" }}>
-          <button className="btn-accent" onClick={() => setOpen(true)}>
-            + Añadir receta
-          </button>
-        </div>
-
+        
         {/* HEADER */}
         <div className="alchemy-grid-row alchemy-grid-header">
           <div>Producto</div>
           <div>Descripción</div>
           <div>Ingredientes</div>
-          <div>Base</div>
-          <div></div>
+          {/* <div>Base</div> */}
+          <div>          
+            <button className="btn-accent" onClick={() => setOpen(true)}>
+            + Añadir receta
+          </button></div>
         </div>
 
         {/* FILAS */}
@@ -102,7 +98,7 @@ export function AlchemyGrid({
             </div>
 
             {/* BASE */}
-            <div className="ag-cell">
+            {/* <div className="ag-cell">
               {(() => {
                 const base = r.Elementos[MAX_ELEM - 1];
                 return base.NombreElemento ? (
@@ -118,7 +114,7 @@ export function AlchemyGrid({
                   "—"
                 );
               })()}
-            </div>
+            </div> */}
 
             {/* ACCIONES */}
             <div className="ag-actions">
