@@ -358,80 +358,65 @@ const extraerMaterial = async (id_material: number, cantidad: number) => {
 
   <div className="table-wrap" style={{ padding: "1rem" }}>
     {/* Lista de materiales existentes */}
-    <div style={{ display: "flex", flexDirection: "column", gap: ".5rem" }}>
-      {mats.map((m) => (
-        <div
-          key={m.id_material}
-          className="mission-card"
-          style={{ margin: 0, cursor: "default" }}
-        >
-          <div className="mission-card-head" style={{ justifyContent: "space-between", gap: ".75rem" }}>
-            <div className="mission-card-titles">
-              <div className="mission-card-title">
-                {m.material ?? "Material sin nombre"}
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: ".5rem", alignItems: "center" }}>
-              <button
-                className="btn-accent"
-                onClick={() => extraerMaterial(m.id_material, 1)}
-                disabled={m.elementos.length === 0}
-                title={m.elementos.length === 0 ? "Este material no tiene mapeo" : "Extraer 1 unidad"}
-              >
-                Extraer
-              </button>
-
-              {/* opcional: extraer x5 */}
-              {/* <button
-                className="btn"
-                onClick={() => extraerMaterial(m.id_material, 5)}
-                disabled={m.elementos.length === 0}
-                title={m.elementos.length === 0 ? "Este material no tiene mapeo" : "Extraer 5 unidades"}
-              >
-                Extraer x5
-              </button> */}
-            </div>
-
-            <div className="mission-card-tags" style={{ flexBasis: "100%" }}>
-              <span className="muted">Elementos extraíbles:</span>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: ".25rem" }}>
-                {m.elementos.map((el, i) => {
-                  const backgroundColor = colores.get(el.nombre) || "transparent";
-                  const fg = textColor(backgroundColor || "");
-                  return (
-                    <span key={i} className="badge" style={{ background: "transparent" }}>
-                      <span
-                        style={{
-                          background: backgroundColor,
-                          color: fg,
-                          padding: ".1rem .35rem",
-                          borderRadius: 6,
-                          border: "1px solid #3a2d43",
-                        }}
-                      >
-                        {el.nombre}
-                      </span>
-                      <span className="muted">x{el.proporcion}</span>
-                    </span>
-                  );
-                })}
-                {m.elementos.length === 0 && (
-                  <span className="muted">— Sin mapeo de extracción —</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          </div>
-      ))}
-
-      {mats.length === 0 && (
-        <div className="empty">
-          <p>No hay materiales configurados aún.</p>
+{/* Lista de materiales existentes (2 por fila) */}
+<div className="mat-grid">
+  {mats.map((m) => (
+    <div key={m.id_material} className="mat-card">
+      <div className="mat-top">
+        <div className="mat-title">
+          {m.material ?? "Material sin nombre"}
         </div>
-      )}
+
+      
+      </div>
+
+      <div className="mat-tags">
+        {/* <span className="muted">Extrae:</span> */}
+
+        <div className="mat-badges">
+          {m.elementos.map((el, i) => {
+            const backgroundColor = colores.get(el.nombre) || "transparent";
+            const fg = textColor(backgroundColor || "");
+            return (
+              <span key={i} className="badge mat-badge" style={{ background: "transparent" }}>
+                <span
+                  className="mat-chip"
+                  style={{
+                    background: backgroundColor,
+                    color: fg,
+                  }}
+                >
+                  {el.nombre}
+                </span>
+                <span className="muted">x{el.proporcion}</span>
+              </span>
+            );
+          })}
+
+          {m.elementos.length === 0 && (
+            <span className="muted">— Sin mapeo —</span>
+          )}
+
+          <button
+          className="btn-accent mat-btn"
+          onClick={() => extraerMaterial(m.id_material, 1)}
+          disabled={m.elementos.length === 0}
+          title={m.elementos.length === 0 ? "Este material no tiene mapeo" : "Extraer 1 unidad"}
+        >
+          Extraer
+        </button>
+        </div>
+      </div>
     </div>
+  ))}
+
+  {mats.length === 0 && (
+    <div className="empty">
+      <p>No hay materiales configurados aún.</p>
+    </div>
+  )}
+</div>
+
 
     {/* Fila para añadir nuevo material */}
     <div
@@ -499,6 +484,9 @@ const extraerMaterial = async (id_material: number, cantidad: number) => {
       </div>
     </div>
   </div>
+
+
+  
 </div>
 
     </section>
