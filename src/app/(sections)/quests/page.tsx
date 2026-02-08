@@ -34,6 +34,55 @@ export default function MisionesPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+ const [draggingId, setDraggingId] = useState<number | null>(null);
+
+async function reorderIncompletas(fromId: number, toId: number) {
+  setMisiones(prev => {
+    const pendientesPrev = prev.filter(m => !m.completada);
+    const completadasPrev = prev.filter(m => m.completada);
+
+    const fromIndex = pendientesPrev.findIndex(m => m.id_mision === fromId);
+    const toIndex = pendientesPrev.findIndex(m => m.id_mision === toId);
+
+    if (fromIndex === -1 || toIndex === -1) return prev;
+
+    const nuevasPendientes = [...pendientesPrev];
+    const [movida] = nuevasPendientes.splice(fromIndex, 1);
+    nuevasPendientes.splice(toIndex, 0, movida);
+
+    // 🔥 recalculamos importancia según nuevo orden
+    const actualizadas = nuevasPendientes.map((m, index) => ({
+      ...m,
+      importancia: index
+    }));
+
+    // 🔥 llamada API (no bloquea el setState)
+    actualizarOrdenAPI(actualizadas);
+
+    return [...actualizadas, ...completadasPrev];
+  });
+}
+
+async function actualizarOrdenAPI(misionesOrdenadas: Mision[]) {
+  try {
+    await fetch("/api/misiones/reordenar", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        misiones: misionesOrdenadas.map(m => ({
+          id_mision: m.id_mision,
+          importancia: m.importancia
+        }))
+      })
+    });
+  } catch (err) {
+    console.error("Error actualizando orden", err);
+  }
+}
+
+
+
+
   // ===== CARGAR MISIONES =====
   useEffect(() => {
     (async () => {
@@ -58,7 +107,7 @@ export default function MisionesPage() {
               ? null
               : Number(m.importancia),
           recompensa: m.recompensa ?? null,
-          completada: Boolean(m.completada), // 👈 asegura boolean
+          completada: Boolean(m.completada), 
         }));
 
         setMisiones(data);
@@ -72,7 +121,9 @@ export default function MisionesPage() {
   }, []);
 
   const hayMisiones = misiones.length > 0;
-  const pendientes = misiones.filter((m) => !m.completada);
+  const pendientes = [...misiones]
+    .filter(m => !m.completada)
+    .sort((a, b) => (a.importancia ?? 100) - (b.importancia ?? 100));
   const completadas = misiones.filter((m) => m.completada);
 
   // ===== VER DETALLE =====
@@ -255,9 +306,18 @@ export default function MisionesPage() {
           ) : (
             <div className="misiones-grid">
               {pendientes.map((m) => (
-                <div
+                 <div
                   key={m.id_mision}
-                  className="mission-card"
+                  className="mission-card "
+                  draggable
+                  onDragStart={() => setDraggingId(m.id_mision)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => {
+                    if (draggingId !== null) {
+                      reorderIncompletas(draggingId, m.id_mision);
+                    }
+                    setDraggingId(null);
+                  }}
                   onClick={() => abrirVer(m)}
                 >
                   <div className="mission-card-head">
